@@ -1,0 +1,142 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+BASE="$HOME/hwp-tests"
+LOGS="$BASE/logs"
+INPUT="$BASE/inputs_collapse_probe.txt"
+
+echo "== Running collapse probe test =="
+bash "$BASE/runs/run_sequential.sh" "$INPUT" >/dev/null
+
+LATEST=$(ls -t "$LOGS"/chain_hwp_*.jsonl | head -n 1)
+echo "Latest chain: $LATEST"
+
+inner() {
+  sed -n "${1}p" "$LATEST" | jq -r '.payloads[0].text' | jq -c .
+}
+
+# find first recovery round
+REC_ROUND=0
+for i in 1 2 3 4 5 6 7 8; do
+  R=$(inner "$i")
+  if [[ "$(echo "$R" | jq -r '.recovery_applied')" == "true" ]]; then
+    REC_ROUND=$i
+    break
+  fi
+done
+
+if (( REC_ROUND == 0 )); then
+  echo "FAIL: No recovery_applied==true found in 8 rounds"
+  exit 1
+fi
+
+STAB_ROUND=$((REC_ROUND + 1))
+if (( STAB_ROUND > 8 )); then
+  echo "FAIL: Recovery happened at last round; no stabilization round to check"
+  exit 1
+fi
+
+R1=$(inner 1)
+RK=$(inner "$REC_ROUND")
+RS=$(inner "$STAB_ROUND")
+
+echo "Round 1: $R1"
+echo "Recovery round ($REC_ROUND): $RK"
+echo "Stabilization round ($STAB_ROUND): $RS"
+
+PASS=true
+
+# ---- Round 1 drift check ----
+R1_DRIFT=$(echo "$R1" | jq -r '.drift_rate')
+if [[ "$R1_DRIFT" != "0" && "$R1_DRIFT" != "0.0" ]]; then
+  echo "FAIL: Round1 drift not zero"
+  PASS=false
+fi
+
+# ---- Recovery round strong checks ----
+if [[ "$(echo "$RK" | jq -r '.collapse_detected')" != "true" ]]; then
+  echo "FAIL: Recovery round must have collapse_detected=true"
+  PASS=false
+fi
+
+VARLEN=$(echo "$RK" | jq -r '.variables | length')
+KEEP_LEN=$(echo "$RK" | jq -r '(.recovery_kept_variables // []) | length')
+NEW_LEN=$(echo "$RK" | jq -r '(.recovery_new_variables // []) | length')
+SHARED=$(echo "$RK" | jq -r '.shared_variable_count')
+
+if (( VARLEN != 30 )); then
+  echo "FAIL: Recovery variables length must be 30 (got $VARLEN)"
+  PASS=false
+fi
+
+# Keep length should be min(20, parent_variables_len)
+PARENT_LEN=$(echo "$R1" | jq -r '.variables | length')
+EXPECTED_KEEP=$PARENT_LEN
+if (( EXPECTED_KEEP > 20 )); then EXPECTED_KEEP=20; fi
+
+if (( KEEP_LEN != EXPECTED_KEEP )); then
+  echo "FAIL: recovery_kept_variables length must be min(20,parent_len) (got $KEEP_LEN, expected $EXPECTED_KEEP)"
+  PASS=false
+fi
+
+# new should fill to 30, but allow <= (30-keep) to avoid brittleness; enforce not exceed
+MAX_NEW=$((30-EXPECTED_KEEP))
+if (( NEW_LEN > MAX_NEW )); then
+  echo "FAIL: recovery_new_variables length must be <= (30-keep) (got $NEW_LEN, max $MAX_NEW)"
+  PASS=false
+fi
+
+if (( SHARED != KEEP_LEN )); then
+  echo "FAIL: shared_variable_count must equal keep_len in recovery (got $SHARED vs $KEEP_LEN)"
+  PASS=false
+fi
+
+# variables MUST begin with keep (exact)
+python3 - <<PY || { echo "FAIL: variables does not begin with keep (exact order)"; exit 1; }
+import json
+rk=json.loads('''$RK''')
+vars_=rk.get("variables", [])
+keep=rk.get("recovery_kept_variables") or []
+assert vars_[:len(keep)] == keep
+PY
+
+# drift/novelty consistency (tolerant)
+python3 - <<PY || { echo "FAIL: drift/novelty not consistent with keep/new (tolerance)"; exit 1; }
+import json
+rk=json.loads('''$RK''')
+shared=int(rk.get("shared_variable_count"))
+varlen=len(rk.get("variables", []))
+newlen=len(rk.get("recovery_new_variables") or [])
+drift=float(rk.get("drift_rate"))
+nov=float(rk.get("novelty_rate"))
+exp_drift=1 - (shared/varlen)
+exp_nov=newlen/varlen
+assert abs(drift-exp_drift) <= 1e-2
+assert abs(nov-exp_nov) <= 1e-2
+PY
+
+# ---- Stabilization round checks (don’t break existing PASS) ----
+S_SHARED=$(echo "$RS" | jq -r '.shared_variable_count')
+S_DRIFT=$(echo "$RS" | jq -r '.drift_rate')
+
+if (( S_SHARED < 20 )); then
+  echo "FAIL: Stabilization shared_variable_count < 20 (got $S_SHARED)"
+  PASS=false
+fi
+
+python3 - <<PY || { echo "FAIL: Stabilization drift_rate > 0.34"; exit 1; }
+import json
+rs=json.loads('''$RS''')
+assert float(rs.get("drift_rate")) <= 0.34
+PY
+
+if $PASS; then
+  echo "============================"
+  echo "HWP v0.4 HARDENED: PASS"
+  echo "============================"
+else
+  echo "============================"
+  echo "HWP v0.4 HARDENED: FAIL"
+  echo "============================"
+  exit 1
+fi

@@ -1,0 +1,65 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+BASE="$HOME/hwp-tests"
+LOGS="$BASE/logs"
+INPUT="$BASE/inputs_collapse_probe.txt"
+
+echo "== Running collapse probe test =="
+
+bash "$BASE/runs/run_sequential.sh" "$INPUT"
+
+LATEST=$(ls -t "$LOGS"/chain_hwp_*.jsonl | head -n 1)
+echo "Latest chain: $LATEST"
+
+extract() {
+  sed -n "${1}p" "$LATEST" \
+  | jq -r '.payloads[0].text' \
+  | jq -c .
+}
+
+R1=$(extract 1)
+R2=$(extract 2)
+R3=$(extract 3)
+
+echo "Round 1: $R1"
+echo "Round 2: $R2"
+echo "Round 3: $R3"
+
+R1_DRIFT=$(echo "$R1" | jq -r '.drift_rate')
+R2_COLLAPSE=$(echo "$R2" | jq -r '.collapse_detected')
+R3_SHARED=$(echo "$R3" | jq -r '.shared_variable_count')
+R3_DRIFT=$(echo "$R3" | jq -r '.drift_rate')
+
+PASS=true
+
+if [[ "$R1_DRIFT" != "0" && "$R1_DRIFT" != "0.0" ]]; then
+  echo "FAIL: Round1 drift not zero"
+  PASS=false
+fi
+
+if [[ "$R2_COLLAPSE" != "true" ]]; then
+  echo "FAIL: Round2 did not trigger collapse"
+  PASS=false
+fi
+
+if (( R3_SHARED < 20 )); then
+  echo "FAIL: Round3 shared_variable_count < 20"
+  PASS=false
+fi
+
+awk "BEGIN {exit !($R3_DRIFT <= 0.34)}" || {
+  echo "FAIL: Round3 drift_rate > 0.34"
+  PASS=false
+}
+
+if $PASS; then
+  echo "============================"
+  echo "HWP v0.4 HARDENED: PASS"
+  echo "============================"
+else
+  echo "============================"
+  echo "HWP v0.4 HARDENED: FAIL"
+  echo "============================"
+  exit 1
+fi

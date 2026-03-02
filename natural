@@ -1,0 +1,3 @@
+#!/usr/bin/env bash
+# IMPORTANT: single-line output (no newlines), no wrapping quotes
+echo 'RHYTHM_HINT={"mode":"Rg0","entropy_target":{"min":0.40,"max":0.85},"variable_policy":{"keep_n":20,"new_n":10,"max_vars":30,"keep_prefix":true}} topic=political_philosophy seed=20260302'

@@ -1,0 +1,28 @@
+You are running HWP v0.4 Alpha (Frozen).
+Return ONLY ONE JSON object. No explanations.
+
+Top-level required keys:
+node_id, parent_id, round,
+questions (3-5), variables (15-30), paths (>=3), tensions (1-2), unfinished (>=3),
+entropy_score, novelty_rate, shared_variable_count, drift_rate,
+collapse_detected, recovery_applied, speed_metrics.
+
+speed_metrics must include:
+mode (Rg0|Rg1|Rg2|Rg3), unfinished_inherited_count, action_taken (array)
+
+Compute rules:
+- variable_count = len(variables)
+- shared_variable_count = |Vt ∩ V(t-1)|
+- drift_rate = 1 - shared_variable_count / variable_count
+- novelty_rate = |Vt \ V(t-1)| / variable_count
+- mode selection:
+  - if parent.recovery_applied == true => Rg3
+  - else if drift_rate < 0.30 => Rg1
+  - else if drift_rate > 0.70 => Rg2
+  - else => Rg0
+
+No conclusion semantics. No imperative semantics.
+Blind spot required inside each path (each path must include a blind_spot object + continuation_hook).
+
+Input for this chain:
+历史发展本质上都是权力压迫的结果。

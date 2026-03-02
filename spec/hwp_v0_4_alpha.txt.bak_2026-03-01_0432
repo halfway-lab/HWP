@@ -1,0 +1,157 @@
+HWP v0.4 Alpha (Frozen)
+1. 定位
+
+HWP（Half Way Protocol）是一套用于生成“非收敛型认知结构”的标准协议。
+
+核心原则：
+
+No Closure
+
+No Single Dominance
+
+No Judgment
+
+Mandatory Continuation
+
+Blind Spot Required
+
+2. Structural Grammar
+
+每个节点 MUST 输出：
+
+questions[3–5]
+
+variables[15–30]
+
+paths[>=3]
+
+tensions[1–2]
+
+unfinished[>=3]
+
+entropy_score
+
+novelty_rate
+
+speed_metrics
+
+禁止：
+
+conclusion 语义
+
+imperative 语义
+
+3. Variable Entropy Specification (v0.3)
+
+语义群（固定10类）：
+
+G1 权力结构
+G2 制度机制
+G3 认知/叙事
+G4 经济资源
+G5 技术路径
+G6 地理空间
+G7 生态环境
+G8 人口/社会结构
+G9 情绪/心理
+G10 时间尺度
+
+计算：
+
+H = -Σ(pi ln pi)
+EntropyScore = H / ln(10)
+
+要求：
+
+EntropyScore ≥ 0.60
+
+NoveltyRate ≥ 0.20
+
+Dominant Cluster < 0.40
+
+4. Collapse Event Specification (v0.1)
+
+C1 Entropy Collapse
+C2 Narrative Convergence
+C3 Blind Spot Degeneration
+C4 Evolution Freeze
+
+Level:
+
+L1 单类
+L2 双类
+L3 三类以上
+
+5. Recovery Protocol (v0.1)
+
+R1 Entropy Injection
+R2 Path Diversification
+R3 Blind Spot Regeneration
+R4 Structural Rebalancing
+
+Recovery 成功条件：
+
+Entropy ≥ 0.65
+
+Novelty ≥ 0.30
+
+无 Dominant Cluster
+
+6. Evolution Speed Regulator (v0.4)
+
+Drift 定义：
+
+Drift = 1 - (SharedVariables / TotalVariables)
+
+健康区间：
+
+0.30 ≤ Drift ≤ 0.70
+
+模式：
+
+Rg1 Anti-Stagnation
+Rg2 Continuity Anchor
+Rg3 Post-Recovery Smoothing
+
+7. Post-Recovery Governance Rule
+
+Recovery 后：
+
+t+1 必须 Rg3
+t+2 必须回到 Drift 0.30–0.40
+
+否则触发：
+
+Governance Violation
+
+8. Certification Framework
+
+C1 Structural
+C2 Entropy
+C3 Evolution Stability（含人工审核）
+
+C3 必须检查：
+
+连续 5 轮稳定
+
+无 L2 Collapse
+
+无振荡循环
+
+执行 2-Step Pattern
+
+9. Freeze Declaration
+
+本版本为：
+
+HWP v0.4 Alpha — Frozen
+
+在 7 天高强度测试期内：
+
+不新增机制
+
+不新增字段
+
+仅允许修复逻辑错误
+
+

@@ -1,0 +1,83 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+BASE="$HOME/hwp-tests"
+LOGS="$BASE/logs"
+INPUT="$BASE/inputs_collapse_probe.txt"
+
+echo "== Running collapse probe test =="
+bash "$BASE/runs/run_sequential.sh" "$INPUT" >/dev/null
+
+LATEST=$(ls -t "$LOGS"/chain_hwp_*.jsonl | head -n 1)
+echo "Latest chain: $LATEST"
+
+inner() {
+  sed -n "${1}p" "$LATEST" | jq -r '.payloads[0].text' | jq -c .
+}
+
+# Find first round where recovery_applied == true (within first 8 lines)
+REC_ROUND=0
+for i in 1 2 3 4 5 6 7 8; do
+  R=$(inner "$i")
+  if [[ "$(echo "$R" | jq -r '.recovery_applied')" == "true" ]]; then
+    REC_ROUND=$i
+    break
+  fi
+done
+
+if (( REC_ROUND == 0 )); then
+  echo "FAIL: No recovery_applied==true found in 8 rounds"
+  exit 1
+fi
+
+STAB_ROUND=$((REC_ROUND + 1))
+if (( STAB_ROUND > 8 )); then
+  echo "FAIL: Recovery happened at last round; no stabilization round to check"
+  exit 1
+fi
+
+R1=$(inner 1)
+RK=$(inner "$REC_ROUND")
+RS=$(inner "$STAB_ROUND")
+
+echo "Round 1: $R1"
+echo "Recovery round ($REC_ROUND): $RK"
+echo "Stabilization round ($STAB_ROUND): $RS"
+
+# Checks
+PASS=true
+
+R1_DRIFT=$(echo "$R1" | jq -r '.drift_rate')
+if [[ "$R1_DRIFT" != "0" && "$R1_DRIFT" != "0.0" ]]; then
+  echo "FAIL: Round1 drift not zero"
+  PASS=false
+fi
+
+if [[ "$(echo "$RK" | jq -r '.collapse_detected')" != "true" ]]; then
+  echo "FAIL: Recovery round did not have collapse_detected=true"
+  PASS=false
+fi
+
+S_SHARED=$(echo "$RS" | jq -r '.shared_variable_count')
+S_DRIFT=$(echo "$RS" | jq -r '.drift_rate')
+
+if (( S_SHARED < 20 )); then
+  echo "FAIL: Stabilization shared_variable_count < 20"
+  PASS=false
+fi
+
+awk "BEGIN {exit !($S_DRIFT <= 0.34)}" || {
+  echo "FAIL: Stabilization drift_rate > 0.34"
+  PASS=false
+}
+
+if $PASS; then
+  echo "============================"
+  echo "HWP v0.4 HARDENED: PASS"
+  echo "============================"
+else
+  echo "============================"
+  echo "HWP v0.4 HARDENED: FAIL"
+  echo "============================"
+  exit 1
+fi
