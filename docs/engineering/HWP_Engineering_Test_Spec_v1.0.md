@@ -4,7 +4,7 @@ Phase 1 — Hardening Test Harness
 
 Version: 1.0
 Status: Draft for Freeze
-Scope: v0.5.x line hardening
+Scope: v0.6.x line hardening
 
 1. Purpose
 

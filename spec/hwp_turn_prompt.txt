@@ -167,10 +167,10 @@ speed_metrics.action_taken MUST describe what you did this round (array of strin
 If input_text contains COLLAPSE_PROBE=1, treat it as a control flag (not a topic); do not include it in questions/variables text.
 （若出现 COLLAPSE_PROBE=1，将其视为控制标记，不得写入问题或变量内容。）
 
-### v0.5 Rhythm Engine v2 (Mirror Phase)
+### v0.6 Rhythm Engine v2 (Mirror Phase)
 You must output a `rhythm` object in every round.
 
-Mirror rule (mandatory in v0.5 mirror phase)
+Mirror rule (mandatory in v0.6 mirror phase)
 - Set `rhythm.mode` to exactly equal `speed_metrics.mode` for that round.
 
 Required fields
@@ -205,7 +205,7 @@ RHYTHM_HINT=<json>
   - rhythm.hint_applied = true
 - For consistency:
   - speed_metrics.mode MUST equal rhythm.mode
-If RHYTHM_HINT is absent, continue v0.5 mirror behavior.
+If RHYTHM_HINT is absent, continue v0.6 mirror behavior.
 
 
 ============================================================

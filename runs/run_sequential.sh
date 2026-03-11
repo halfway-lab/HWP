@@ -33,6 +33,10 @@ if ! [[ "$ROUNDS_PER_CHAIN" =~ ^[0-9]+$ ]] || [ "$ROUNDS_PER_CHAIN" -lt 1 ]; the
   echo "错误：HWP_ROUNDS_PER_CHAIN 必须是正整数，当前值: $ROUNDS_PER_CHAIN"
   exit 1
 fi
+if ! awk -v x="$ROUND_SLEEP_SEC" 'BEGIN{exit !(x ~ /^[0-9]+([.][0-9]+)?$/)}'; then
+  echo "错误：HWP_ROUND_SLEEP_SEC 必须是非负数字，当前值: $ROUND_SLEEP_SEC"
+  exit 1
+fi
 mkdir -p "$LOG_DIR"
 
 # ---- v0.6 dynamic controller ----
