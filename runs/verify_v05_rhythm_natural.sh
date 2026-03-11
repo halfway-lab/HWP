@@ -4,7 +4,7 @@ set -euo pipefail
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 LOG_DIR="$ROOT_DIR/logs"
 
-echo "== Running v0.5.2 rhythm NATURAL (hint-aware) =="
+echo "== Running v0.5.3 rhythm NATURAL (hint-aware) =="
 
 latest_chain_file() {
   ls -1t "$LOG_DIR"/chain_hwp_*.jsonl 2>/dev/null | head -n 1
@@ -157,9 +157,9 @@ for r in rounds:
 
     hint = rhythm.get("hint")
     if hint is None:
-        fail("Missing rhythm.hint (v0.5.2 required)", snippet=json.dumps(rhythm, ensure_ascii=False))
+        fail("Missing rhythm.hint (v0.5.3 required)", snippet=json.dumps(rhythm, ensure_ascii=False))
     if rhythm.get("hint_applied") is not True:
-        fail("rhythm.hint_applied must be true (v0.5.2 required)", snippet=json.dumps(rhythm, ensure_ascii=False))
+        fail("rhythm.hint_applied must be true (v0.5.3 required)", snippet=json.dumps(rhythm, ensure_ascii=False))
     if not isinstance(hint, dict):
         fail("rhythm.hint must be an object", snippet=json.dumps(hint, ensure_ascii=False))
 
@@ -238,6 +238,6 @@ else:
     print(f"OK: No recovery_applied==true found in {len(rounds)} rounds (natural allows this)")
 
 print("============================")
-print("HWP v0.5.2 RHYTHM (NATURAL): PASS")
+print("HWP v0.5.3 RHYTHM (NATURAL): PASS")
 print("============================")
 PY

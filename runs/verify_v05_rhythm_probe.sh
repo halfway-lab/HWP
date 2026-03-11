@@ -4,7 +4,7 @@ set -euo pipefail
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 LOG_DIR="$ROOT_DIR/logs"
 
-echo "== Running v0.5.2 rhythm PROBE (hint-aware) =="
+echo "== Running v0.5.3 rhythm PROBE (hint-aware) =="
 
 CHAIN="${1:-}"
 if [ -z "$CHAIN" ]; then
@@ -98,7 +98,7 @@ print("Round 1:", json.dumps(r1, ensure_ascii=False))
 
 valid_modes = {"Rg0","Rg1","Rg2"}
 
-# v0.5.2 requirement: rhythm + hint must exist; hint must match rhythm; rhythm.mode must match speed_metrics.mode
+# v0.5.3 requirement: rhythm + hint must exist; hint must match rhythm; rhythm.mode must match speed_metrics.mode
 for r in rounds:
     rd = int(r.get("round") or 0)
     sm = r.get("speed_metrics") or {}
@@ -119,9 +119,9 @@ for r in rounds:
 
     hint = rhythm.get("hint")
     if hint is None:
-        fail("Missing rhythm.hint (v0.5.2 required)", snippet=json.dumps(rhythm, ensure_ascii=False))
+        fail("Missing rhythm.hint (v0.5.3 required)", snippet=json.dumps(rhythm, ensure_ascii=False))
     if rhythm.get("hint_applied") is not True:
-        fail("rhythm.hint_applied must be true (v0.5.2 required)", snippet=json.dumps(rhythm, ensure_ascii=False))
+        fail("rhythm.hint_applied must be true (v0.5.3 required)", snippet=json.dumps(rhythm, ensure_ascii=False))
     if not isinstance(hint, dict):
         fail("rhythm.hint must be an object", snippet=json.dumps(hint, ensure_ascii=False))
 
@@ -158,7 +158,7 @@ for r in rounds:
         fail("variable_policy.keep_prefix must be true", snippet=json.dumps(rvp, ensure_ascii=False))
 
 # Probe requirement: must detect collapse at least once OR explicitly allow no-collapse runs?
-# For hardened probe, earlier you wanted recovery if collapse detected; but v0.5.2 dynamic controller may not force collapse.
+# For hardened probe, earlier you wanted recovery if collapse detected; but v0.5.3 dynamic controller may not force collapse.
 # We'll keep the existing behavior: if no collapse, that's OK (print OK line).
 collapse_rounds = [r for r in rounds if r.get("collapse_detected") is True]
 if not collapse_rounds:
@@ -171,6 +171,6 @@ else:
     print("OK: Collapse/recovery observed")
 
 print("============================")
-print("HWP v0.5.2 RHYTHM (PROBE / dynamic): PASS")
+print("HWP v0.5.3 RHYTHM (PROBE / dynamic): PASS")
 print("============================")
 PY
