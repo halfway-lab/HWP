@@ -190,7 +190,7 @@ Constraints
 - Must satisfy: entropy_target.min <= entropy_score <= entropy_target.max.
 - variable_policy.keep_prefix must be true.
 - Keep existing fields unchanged; this is an additive change only.
-### v0.5.1 Rhythm Controller Hint (Runner-injected)
+### v0.5.2 Rhythm Controller Hint (Runner-injected)
 If input_text contains a line starting with:
 RHYTHM_HINT=<json>
 

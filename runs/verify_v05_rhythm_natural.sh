@@ -28,7 +28,7 @@ def snip(s: str, n: int = 260) -> str:
     s = s.replace("\n", "\\n")
     return (s[:n] + "...") if len(s) > n else s
 
-def fail(msg: str, snippet: str | None = None, line_no: int | None = None):
+def fail(msg: str, snippet=None, line_no=None):
     print(f"FAIL: {msg}")
     if line_no is not None:
         print(f"  at line: {line_no}")
@@ -173,11 +173,17 @@ for r in rounds:
     het = hint.get("entropy_target")
     if not isinstance(het, dict):
         fail("hint.entropy_target missing/invalid", snippet=json.dumps(hint, ensure_ascii=False))
+    if not isinstance(ret, dict):
+        fail("rhythm.entropy_target missing/invalid", snippet=json.dumps(rhythm, ensure_ascii=False))
     if not deep_equal(ret, het):
         fail("rhythm.entropy_target must equal hint.entropy_target (exact)", snippet=json.dumps({"rhythm":ret,"hint":het}, ensure_ascii=False))
 
     rvp = rhythm.get("variable_policy")
     hvp = hint.get("variable_policy")
+    if not isinstance(hvp, dict):
+        fail("hint.variable_policy missing/invalid", snippet=json.dumps(hint, ensure_ascii=False))
+    if not isinstance(rvp, dict):
+        fail("rhythm.variable_policy missing/invalid", snippet=json.dumps(rhythm, ensure_ascii=False))
     if not deep_equal(rvp, hvp):
         fail("rhythm.variable_policy must equal hint.variable_policy (exact)", snippet=json.dumps({"rhythm":rvp,"hint":hvp}, ensure_ascii=False))
 
