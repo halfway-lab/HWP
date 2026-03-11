@@ -164,7 +164,7 @@ Boolean flag indicating final-answer framing or resolution language.
 
 All tests must be executed against:
 
-Baseline: v0.5.2 (frozen)
+Baseline: v0.5.3 (frozen)
 
 All future modifications must:
 

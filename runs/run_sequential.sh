@@ -29,7 +29,7 @@ PROMPT_FINGERPRINT="$(grep -m1 '^PROMPT_FINGERPRINT:' "$SPEC_PROMPT" | sed -E 's
 ROUNDS_PER_CHAIN=8
 mkdir -p "$LOG_DIR"
 
-# ---- v0.5.2 dynamic controller ----
+# ---- v0.5.3 dynamic controller ----
 emit_hint_json() {
   # args: mode min max keep_n new_n max_vars
   local mode="$1" mn="$2" mx="$3" keep_n="$4" new_n="$5" max_vars="$6"
@@ -94,7 +94,7 @@ while IFS= read -r line || [ -n "$line" ]; do
   echo "开始链: $session_id，输入: $line" | tee -a "$LOG_DIR/run.log"
   echo "  PROMPT_FINGERPRINT: $PROMPT_FINGERPRINT" | tee -a "$LOG_DIR/run.log"
 
-  # v0.5.2 controller state
+  # v0.5.3 controller state
   base_line="$line"
   # prevent conflicts if user left RHYTHM_HINT in input accidentally
   base_line="$(printf "%s" "$base_line" | sed 's/RHYTHM_HINT=/RHYTHM_HINT_DISABLED=/g')"
