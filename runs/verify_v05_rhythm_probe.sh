@@ -4,7 +4,7 @@ set -euo pipefail
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 LOG_DIR="$ROOT_DIR/logs"
 
-echo "== Running v0.5.1 rhythm PROBE (hint-aware) =="
+echo "== Running v0.5.2 rhythm PROBE (hint-aware) =="
 
 CHAIN="${1:-}"
 if [ -z "$CHAIN" ]; then

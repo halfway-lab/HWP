@@ -4,7 +4,7 @@ set -euo pipefail
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 LOG_DIR="$ROOT_DIR/logs"
 
-echo "== Running v0.5.1 rhythm NATURAL (hint-aware) =="
+echo "== Running v0.5.2 rhythm NATURAL (hint-aware) =="
 
 latest_chain_file() {
   ls -1t "$LOG_DIR"/chain_hwp_*.jsonl 2>/dev/null | head -n 1
@@ -80,6 +80,17 @@ def parse_text_maybe_json(text: str, line_no: int):
         return []
     return harvest_rounds_from_parsed(parsed)
 
+def num(x, name):
+    if x is None:
+        fail(f"Missing numeric field: {name}")
+    try:
+        return float(x)
+    except Exception:
+        fail(f"Non-numeric field: {name}", snippet=str(x))
+
+def deep_equal(a, b):
+    return json.dumps(a, sort_keys=True, ensure_ascii=False) == json.dumps(b, sort_keys=True, ensure_ascii=False)
+
 rounds = []
 with open(chain_path, "r", encoding="utf-8") as f:
     for i, line in enumerate(f, 1):
@@ -96,42 +107,36 @@ with open(chain_path, "r", encoding="utf-8") as f:
         if isinstance(obj, dict) and "round" in obj:
             rounds.append(obj)
             continue
+
         for t in iter_payload_texts(obj):
             rounds.extend(parse_text_maybe_json(t, i))
 
 if not rounds:
     fail("No round objects found in chain file")
-    
-# Require full run completion (avoid "PASS" on truncated chains)
-round_nums = sorted({int(r.get("round") or 0) for r in rounds if r.get("round") is not None})
-if not round_nums:
-    fail("No round numbers found")
-expected_max = 8
-if max(round_nums) < expected_max or len(round_nums) < expected_max:
-    fail("Incomplete chain: expected 8 rounds", snippet=f"rounds={round_nums}")
 
-rounds = sorted(rounds, key=lambda r: int(r.get("round") or 0))
+# Require a complete chain with exactly one round object per expected round.
+expected_rounds = list(range(1, 9))
+round_map = {}
+for r in rounds:
+    rd_raw = r.get("round")
+    if rd_raw is None:
+        continue
+    try:
+        rd = int(rd_raw)
+    except Exception:
+        fail("Invalid round field", snippet=str(rd_raw))
 
-# Require full chain completion (avoid passing on truncated runs)
-round_nums = sorted({int(r.get("round") or 0) for r in rounds if r.get("round") is not None})
-if not round_nums:
-    fail("No round numbers found")
-if max(round_nums) < 8 or len(round_nums) < 8:
-    fail("Incomplete chain: expected 8 rounds", snippet=f"rounds={round_nums}")
+    if rd in round_map:
+        fail("Duplicate round object found in chain", snippet=f"round={rd}")
+    round_map[rd] = r
+
+if sorted(round_map.keys()) != expected_rounds:
+    fail("Expected exactly rounds 1..8", snippet=f"found={sorted(round_map.keys())}")
+
+rounds = [round_map[rd] for rd in expected_rounds]
 
 valid_modes = {"Rg0","Rg1","Rg2"}
 mode_seq = []
-
-def num(x, name):
-    if x is None:
-        fail(f"Missing numeric field: {name}")
-    try:
-        return float(x)
-    except Exception:
-        fail(f"Non-numeric field: {name}", snippet=str(x))
-
-def deep_equal(a, b):
-    return json.dumps(a, sort_keys=True, ensure_ascii=False) == json.dumps(b, sort_keys=True, ensure_ascii=False)
 
 for r in rounds:
     sm = r.get("speed_metrics") or {}
@@ -151,45 +156,41 @@ for r in rounds:
         fail("speed_metrics.mode must equal rhythm.mode", snippet=f"speed={sm_mode}, rhythm={mode}")
 
     hint = rhythm.get("hint")
-if hint is None:
-    fail("Missing rhythm.hint (v0.5.2 required)", snippet=json.dumps(rhythm, ensure_ascii=False))
-if rhythm.get("hint_applied") is not True:
-    fail("rhythm.hint_applied must be true (v0.5.2 required)", snippet=json.dumps(rhythm, ensure_ascii=False))
-if not isinstance(hint, dict):
-    fail("rhythm.hint must be an object", snippet=json.dumps(hint, ensure_ascii=False))
+    if hint is None:
+        fail("Missing rhythm.hint (v0.5.2 required)", snippet=json.dumps(rhythm, ensure_ascii=False))
+    if rhythm.get("hint_applied") is not True:
+        fail("rhythm.hint_applied must be true (v0.5.2 required)", snippet=json.dumps(rhythm, ensure_ascii=False))
+    if not isinstance(hint, dict):
+        fail("rhythm.hint must be an object", snippet=json.dumps(hint, ensure_ascii=False))
 
-hmode = hint.get("mode")
-if hmode not in valid_modes:
-    fail("Invalid hint.mode", snippet=str(hmode))
-if mode != hmode:
-    fail("rhythm.mode must follow hint.mode", snippet=f"hint={hmode}, rhythm={mode}")
+    hmode = hint.get("mode")
+    if hmode not in valid_modes:
+        fail("Invalid hint.mode", snippet=str(hmode))
+    if mode != hmode:
+        fail("rhythm.mode must follow hint.mode", snippet=f"hint={hmode}, rhythm={mode}")
 
-het = hint.get("entropy_target")
-if not isinstance(het, dict):
-    fail("hint.entropy_target missing/invalid", snippet=json.dumps(hint, ensure_ascii=False))
-ret = rhythm.get("entropy_target")
-if not deep_equal(ret, het):
-    fail("rhythm.entropy_target must equal hint.entropy_target (exact)", snippet=json.dumps({"rhythm":ret,"hint":het}, ensure_ascii=False))
+    ret = rhythm.get("entropy_target")
+    het = hint.get("entropy_target")
+    if not isinstance(het, dict):
+        fail("hint.entropy_target missing/invalid", snippet=json.dumps(hint, ensure_ascii=False))
+    if not deep_equal(ret, het):
+        fail("rhythm.entropy_target must equal hint.entropy_target (exact)", snippet=json.dumps({"rhythm":ret,"hint":het}, ensure_ascii=False))
 
-hvp = hint.get("variable_policy")
-rvp = rhythm.get("variable_policy")
-if not deep_equal(rvp, hvp):
-    fail("rhythm.variable_policy must equal hint.variable_policy (exact)", snippet=json.dumps({"rhythm":rvp,"hint":hvp}, ensure_ascii=False))
+    rvp = rhythm.get("variable_policy")
+    hvp = hint.get("variable_policy")
+    if not deep_equal(rvp, hvp):
+        fail("rhythm.variable_policy must equal hint.variable_policy (exact)", snippet=json.dumps({"rhythm":rvp,"hint":hvp}, ensure_ascii=False))
 
-    et = rhythm.get("entropy_target")
-    if not isinstance(et, dict):
-        fail("Missing rhythm.entropy_target")
-    et_min = num(et.get("min"), "rhythm.entropy_target.min")
-    et_max = num(et.get("max"), "rhythm.entropy_target.max")
+    et_min = num(ret.get("min"), "rhythm.entropy_target.min")
+    et_max = num(ret.get("max"), "rhythm.entropy_target.max")
     entropy = num(r.get("entropy_score"), "entropy_score")
     if not (et_min <= entropy <= et_max):
         fail("entropy_score not within rhythm.entropy_target", snippet=f"entropy={entropy}, target=[{et_min},{et_max}]")
 
-    vp = rhythm.get("variable_policy")
-    if not isinstance(vp, dict):
+    if not isinstance(rvp, dict):
         fail("Missing rhythm.variable_policy")
-    if vp.get("keep_prefix") is not True:
-        fail("rhythm.variable_policy.keep_prefix must be true", snippet=json.dumps(vp, ensure_ascii=False))
+    if rvp.get("keep_prefix") is not True:
+        fail("rhythm.variable_policy.keep_prefix must be true", snippet=json.dumps(rvp, ensure_ascii=False))
 
     mode_seq.append(mode)
 
@@ -231,6 +232,6 @@ else:
     print(f"OK: No recovery_applied==true found in {len(rounds)} rounds (natural allows this)")
 
 print("============================")
-print("HWP v0.5.1 RHYTHM (NATURAL): PASS")
+print("HWP v0.5.2 RHYTHM (NATURAL): PASS")
 print("============================")
 PY
