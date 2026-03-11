@@ -4,7 +4,7 @@ Hardening Test Harness — Execution & Freeze Workflow
 
 Version: 1.0
 Status: Engineering Active
-Applies to: v0.5.x line (baseline v0.5.2)
+Applies to: v0.6.x line (baseline v0.6)
 
 0. Phase 1 的一句话目标
 
@@ -36,7 +36,7 @@ Applies to: v0.5.x line (baseline v0.5.2)
 2. Branch & Version Discipline
 Baseline
 
-v0.5.2 = frozen baseline
+v0.6 = frozen baseline
 
 baseline 永远不改（只读）
 
@@ -58,9 +58,9 @@ patch-002-metrics-injection
 
 每个可跑且通过当前矩阵的状态打 tag：
 
-v0.5.3-rc1
+v0.6-rc1
 
-v0.5.3-rc2
+v0.6-rc2
 
 3. Execution Pipeline（每次改动必须走）
 
@@ -68,7 +68,7 @@ v0.5.3-rc2
 
 Step A — Run Baseline Snapshot
 
-对 v0.5.2 跑完整 test matrix（一次性）
+对 v0.6 跑完整 test matrix（一次性）
 
 产出：baseline_report.json
 
@@ -231,6 +231,6 @@ diff vs baseline：整体稳定性提升或持平（不得更差）
 
 满足后，发布：
 
-v0.5.3
+v0.6
 
 并冻结为下一阶段 baseline

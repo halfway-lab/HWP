@@ -26,10 +26,16 @@ SPEC_PROMPT="$ROOT_DIR/spec/hwp_turn_prompt.txt"
 PROMPT_FINGERPRINT="$(grep -m1 '^PROMPT_FINGERPRINT:' "$SPEC_PROMPT" | sed -E 's/^PROMPT_FINGERPRINT:[[:space:]]*//')"
 [ -z "${PROMPT_FINGERPRINT:-}" ] && PROMPT_FINGERPRINT="(missing)"
 
-ROUNDS_PER_CHAIN=8
+ROUNDS_PER_CHAIN="${HWP_ROUNDS_PER_CHAIN:-8}"
+ROUND_SLEEP_SEC="${HWP_ROUND_SLEEP_SEC:-2}"
+
+if ! [[ "$ROUNDS_PER_CHAIN" =~ ^[0-9]+$ ]] || [ "$ROUNDS_PER_CHAIN" -lt 1 ]; then
+  echo "错误：HWP_ROUNDS_PER_CHAIN 必须是正整数，当前值: $ROUNDS_PER_CHAIN"
+  exit 1
+fi
 mkdir -p "$LOG_DIR"
 
-# ---- v0.5.2 dynamic controller ----
+# ---- v0.6 dynamic controller ----
 emit_hint_json() {
   # args: mode min max keep_n new_n max_vars
   local mode="$1" mn="$2" mx="$3" keep_n="$4" new_n="$5" max_vars="$6"
@@ -94,7 +100,7 @@ while IFS= read -r line || [ -n "$line" ]; do
   echo "开始链: $session_id，输入: $line" | tee -a "$LOG_DIR/run.log"
   echo "  PROMPT_FINGERPRINT: $PROMPT_FINGERPRINT" | tee -a "$LOG_DIR/run.log"
 
-  # v0.5.2 controller state
+  # v0.6 controller state
   base_line="$line"
   # prevent conflicts if user left RHYTHM_HINT in input accidentally
   base_line="$(printf "%s" "$base_line" | sed 's/RHYTHM_HINT=/RHYTHM_HINT_DISABLED=/g')"
@@ -206,7 +212,7 @@ Now run Round $r."
       prev_collapse="true"
       prev_recovery="true"
 
-      sleep 2
+      sleep "$ROUND_SLEEP_SEC"
       continue
     fi
 
@@ -223,7 +229,7 @@ Now run Round $r."
     prev_collapse=$(echo "$inner_json" | JQ_SAFE -r '.collapse_detected // false')
     prev_recovery=$(echo "$inner_json" | JQ_SAFE -r '.recovery_applied // false')
 
-    sleep 2
+    sleep "$ROUND_SLEEP_SEC"
   done
 
   echo "完成链: $session_id" | tee -a "$LOG_DIR/run.log"
