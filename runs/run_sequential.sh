@@ -27,6 +27,10 @@ PROMPT_FINGERPRINT="$(grep -m1 '^PROMPT_FINGERPRINT:' "$SPEC_PROMPT" | sed -E 's
 [ -z "${PROMPT_FINGERPRINT:-}" ] && PROMPT_FINGERPRINT="(missing)"
 
 ROUNDS_PER_CHAIN=8
+if ! awk -v x="$ROUND_SLEEP_SEC" 'BEGIN{exit !(x ~ /^[0-9]+([.][0-9]+)?$/)}'; then
+  echo "错误：HWP_ROUND_SLEEP_SEC 必须是非负数字，当前值: $ROUND_SLEEP_SEC"
+  exit 1
+fi
 mkdir -p "$LOG_DIR"
 
 # ---- v0.5.3 dynamic controller ----
