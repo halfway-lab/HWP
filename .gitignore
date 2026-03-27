@@ -1,3 +1,7 @@
 logs/
 *.jsonl
 *.log
+.DS_Store
+reports/
+scripts/
+*.bak*
