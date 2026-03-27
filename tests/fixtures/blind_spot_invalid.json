@@ -1,0 +1,91 @@
+{
+  "description": "Invalid blind spot detection samples - contain violations of spec v0.6",
+  "samples": [
+    {
+      "name": "Score out of range - negative",
+      "data": {
+        "blind_spot_signals": [],
+        "blind_spot_score": -0.5,
+        "blind_spot_reason": ""
+      },
+      "violation": "blind_spot_score must be in range [0.0, 1.0]",
+      "expected_result": "FAIL"
+    },
+    {
+      "name": "Score out of range - exceeds maximum",
+      "data": {
+        "blind_spot_signals": [
+          {
+            "type": "information_gap",
+            "description": "Some issue",
+            "severity": "medium"
+          }
+        ],
+        "blind_spot_score": 1.5,
+        "blind_spot_reason": "Score exceeds valid range"
+      },
+      "violation": "blind_spot_score must be in range [0.0, 1.0]",
+      "expected_result": "FAIL"
+    },
+    {
+      "name": "Signals is null instead of array",
+      "data": {
+        "blind_spot_signals": null,
+        "blind_spot_score": 0.3,
+        "blind_spot_reason": "Signals should be array"
+      },
+      "violation": "blind_spot_signals must be an array, not null",
+      "expected_result": "FAIL"
+    },
+    {
+      "name": "Score is string instead of float",
+      "data": {
+        "blind_spot_signals": [],
+        "blind_spot_score": "0.5",
+        "blind_spot_reason": "Score as string"
+      },
+      "violation": "blind_spot_score must be a float, not string",
+      "expected_result": "FAIL"
+    },
+    {
+      "name": "Missing required fields",
+      "data": {
+        "blind_spot_signals": []
+      },
+      "violation": "blind_spot_score and blind_spot_reason are required fields",
+      "expected_result": "FAIL"
+    },
+    {
+      "name": "Invalid signal type",
+      "data": {
+        "blind_spot_signals": [
+          {
+            "type": "unknown_type",
+            "description": "Invalid type value",
+            "severity": "medium"
+          }
+        ],
+        "blind_spot_score": 0.4,
+        "blind_spot_reason": "Signal with invalid type"
+      },
+      "violation": "signal type must be one of: information_gap, logic_break, assumption_conflict, boundary_blindspot",
+      "expected_result": "FAIL"
+    },
+    {
+      "name": "Invalid severity value",
+      "data": {
+        "blind_spot_signals": [
+          {
+            "type": "information_gap",
+            "description": "Valid description",
+            "severity": "extreme"
+          }
+        ],
+        "blind_spot_score": 0.3,
+        "blind_spot_reason": "Signal with invalid severity"
+      },
+      "violation": "severity must be one of: low, medium, high, critical",
+      "expected_result": "FAIL"
+    }
+  ]
+}

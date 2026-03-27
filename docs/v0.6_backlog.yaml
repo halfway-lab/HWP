@@ -1,0 +1,155 @@
+version: "v0.6"
+project: "HWP"
+mode: "semi-automatic"
+
+global_goal:
+  - "为 HWP v0.6 建立可持续的小步开发循环"
+  - "优先推进 blind spot detection"
+  - "优先推进 semantic group expansion validation"
+  - "优先推进 cross-round continuity tests"
+  - "所有自动开发必须先产生日报与验证结果"
+
+global_rules:
+  - "每次只允许处理一个 queue item"
+  - "一次运行最多修改 3 个文件"
+  - "不得自动 git commit"
+  - "不得自动 git push"
+  - "验证失败两次后，本任务转为 report_only"
+  - "如工作区非干净，默认不进入自动修改模式，只生成报告"
+  - "只有 backlog 中列出的文件允许被修改"
+  - "任何 spec 修改后必须尝试运行对应验证"
+  - "不得删除历史日志"
+  - "不得覆盖已有 release tag 相关内容"
+
+priority_order:
+  - "spec"
+  - "test"
+  - "docs"
+  - "runner"
+
+queue:
+  - id: "V06-001"
+    title: "建立 v0.6 总体开发计划文档"
+    type: "docs"
+    status: "todo"
+    priority: 1
+    files:
+      - "docs/v0.6-plan.md"
+      - "docs/v0.6-dev-rules.md"
+    done_when:
+      - "docs/v0.6-plan.md 存在"
+      - "文档中明确列出 blind spot / semantic group / continuity 三个方向"
+      - "文档包含阶段划分与验证原则"
+    validate:
+      - "test -f docs/v0.6-plan.md"
+      - "grep -q 'blind spot' docs/v0.6-plan.md"
+      - "grep -q 'continuity' docs/v0.6-plan.md"
+    fail_limit: 2
+
+  - id: "V06-002"
+    title: "补充 v0.6 协议增量说明"
+    type: "spec"
+    status: "todo"
+    priority: 2
+    files:
+      - "docs/v0.6-plan.md"
+      - "spec/hwp_turn_prompt.txt"
+    done_when:
+      - "v0.6 增量点以独立小节写入 docs/v0.6-plan.md"
+      - "spec/hwp_turn_prompt.txt 中出现 v0.6 草案段落或标记"
+    validate:
+      - "grep -q 'v0.6' docs/v0.6-plan.md"
+      - "grep -q 'v0.6' spec/hwp_turn_prompt.txt"
+    fail_limit: 2
+
+  - id: "V06-003"
+    title: "设计 blind spot detector 的输入输出字段"
+    type: "spec"
+    status: "todo"
+    priority: 3
+    files:
+      - "docs/v0.6-plan.md"
+      - "spec/hwp_turn_prompt.txt"
+    done_when:
+      - "定义 blind_spot_signals"
+      - "定义 blind_spot_score"
+      - "定义 blind_spot_reason"
+      - "给出至少 2 个示例"
+    validate:
+      - "grep -q 'blind_spot_signals' spec/hwp_turn_prompt.txt"
+      - "grep -q 'blind_spot_score' spec/hwp_turn_prompt.txt"
+      - "grep -q 'blind_spot_reason' spec/hwp_turn_prompt.txt"
+    fail_limit: 2
+
+  - id: "V06-004"
+    title: "设计 cross-round continuity 的验证目标"
+    type: "test"
+    status: "todo"
+    priority: 4
+    files:
+      - "docs/v0.6-tests.md"
+      - "runs/verify_v06_continuity.sh"
+    done_when:
+      - "生成 docs/v0.6-tests.md"
+      - "生成 runs/verify_v06_continuity.sh"
+      - "脚本具备可执行权限"
+    validate:
+      - "test -f docs/v0.6-tests.md"
+      - "test -f runs/verify_v06_continuity.sh"
+      - "test -x runs/verify_v06_continuity.sh"
+    fail_limit: 2
+
+  - id: "V06-005"
+    title: "设计 semantic group expansion 的验证目标"
+    type: "test"
+    status: "todo"
+    priority: 5
+    files:
+      - "docs/v0.6-tests.md"
+      - "runs/verify_v06_semantic_groups.sh"
+    done_when:
+      - "脚本存在"
+      - "脚本中包含至少 1 条成功条件"
+      - "脚本中包含至少 1 条失败条件"
+    validate:
+      - "test -f runs/verify_v06_semantic_groups.sh"
+      - "grep -q 'PASS' runs/verify_v06_semantic_groups.sh || true"
+    fail_limit: 2
+
+  - id: "V06-006"
+    title: "建立 v0.6 自动运行报告模板"
+    type: "docs"
+    status: "todo"
+    priority: 6
+    files:
+      - "docs/v0.6-report-template.md"
+      - "reports/"
+    done_when:
+      - "模板存在"
+      - "模板包含 summary / changed files / validation / next step"
+    validate:
+      - "test -f docs/v0.6-report-template.md"
+      - "grep -q 'summary' docs/v0.6-report-template.md"
+    fail_limit: 2
+
+task_selection_policy:
+  strategy: "first_todo_by_priority"
+  skip_if_status:
+    - "done"
+    - "blocked"
+    - "report_only"
+
+fallback_policy:
+  on_dirty_workspace: "report_only"
+  on_missing_file: "report_only"
+  on_validation_failure: "report_and_stop"
+  on_repeated_failure: "mark_report_only_in_report_not_in_yaml"
+
+report_fields:
+  - "selected_task"
+  - "why_selected"
+  - "files_touched"
+  - "validation_commands"
+  - "validation_results"
+  - "risk_notes"
+  - "next_recommended_step"

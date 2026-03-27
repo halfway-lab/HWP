@@ -1,0 +1,154 @@
+{
+  "description": "Invalid cross-round continuity samples - demonstrating continuity violations and chain collapse scenarios",
+  "samples": [
+    {
+      "name": "Shared variables broken - too few inherited",
+      "round": 3,
+      "data": {
+        "node_id": "node_003",
+        "parent_id": "node_002",
+        "round": 3,
+        "variables": [
+          "var_01", "var_02", "var_03", "var_04", "var_05",
+          "new_var_01", "new_var_02", "new_var_03", "new_var_04", "new_var_05",
+          "new_var_06", "new_var_07", "new_var_08", "new_var_09", "new_var_10",
+          "new_var_11", "new_var_12", "new_var_13", "new_var_14", "new_var_15",
+          "new_var_16", "new_var_17", "new_var_18", "new_var_19", "new_var_20",
+          "new_var_21", "new_var_22", "new_var_23", "new_var_24", "new_var_25"
+        ],
+        "tensions": [
+          {
+            "id": "tension_02",
+            "description": "New tension without continuity",
+            "status": "active"
+          }
+        ],
+        "shared_variable_count": 5,
+        "drift_rate": 0.83,
+        "novelty_rate": 0.83,
+        "collapse_detected": true,
+        "recovery_applied": true
+      },
+      "violation": "shared_variable_count too low (5), indicating broken continuity; drift_rate 0.83 exceeds threshold",
+      "expected_result": "FAIL"
+    },
+    {
+      "name": "Tensions lost - no traceable tension lineage",
+      "round": 4,
+      "data": {
+        "node_id": "node_004",
+        "parent_id": "node_003",
+        "round": 4,
+        "variables": [
+          "var_01", "var_02", "var_03", "var_04", "var_05",
+          "var_06", "var_07", "var_08", "var_09", "var_10",
+          "var_11", "var_12", "var_13", "var_14", "var_15",
+          "var_16", "var_17", "var_18", "var_19", "var_20",
+          "var_21", "var_22", "var_23", "var_24", "var_25",
+          "var_26", "var_27", "var_28", "var_29", "var_30"
+        ],
+        "tensions": [],
+        "shared_variable_count": 25,
+        "drift_rate": 0.17,
+        "novelty_rate": 0.17,
+        "collapse_detected": false,
+        "recovery_applied": false
+      },
+      "violation": "tensions array is empty; lost tension lineage from previous rounds",
+      "expected_result": "FAIL"
+    },
+    {
+      "name": "Chain premature collapse - drift rate too high",
+      "round": 2,
+      "data": {
+        "node_id": "node_002",
+        "parent_id": "node_001",
+        "round": 2,
+        "variables": [
+          "var_01", "var_02", "var_03", "var_04", "var_05",
+          "var_06", "var_07", "var_08", "var_09", "var_10",
+          "completely_new_01", "completely_new_02", "completely_new_03", "completely_new_04", "completely_new_05",
+          "completely_new_06", "completely_new_07", "completely_new_08", "completely_new_09", "completely_new_10",
+          "completely_new_11", "completely_new_12", "completely_new_13", "completely_new_14", "completely_new_15",
+          "completely_new_16", "completely_new_17", "completely_new_18", "completely_new_19", "completely_new_20"
+        ],
+        "tensions": [
+          {
+            "id": "tension_new",
+            "description": "Unrelated tension without context",
+            "status": "active"
+          }
+        ],
+        "shared_variable_count": 10,
+        "drift_rate": 0.67,
+        "novelty_rate": 0.67,
+        "collapse_detected": true,
+        "recovery_applied": true
+      },
+      "violation": "drift_rate 0.67 indicates premature collapse; only 10 shared variables from parent",
+      "expected_result": "FAIL"
+    },
+    {
+      "name": "Missing parent reference - broken chain",
+      "round": 3,
+      "data": {
+        "node_id": "node_003",
+        "parent_id": null,
+        "round": 3,
+        "variables": [
+          "var_01", "var_02", "var_03", "var_04", "var_05",
+          "var_06", "var_07", "var_08", "var_09", "var_10",
+          "var_11", "var_12", "var_13", "var_14", "var_15",
+          "var_16", "var_17", "var_18", "var_19", "var_20",
+          "var_21", "var_22", "var_23", "var_24", "var_25",
+          "var_26", "var_27", "var_28", "var_29", "var_30"
+        ],
+        "tensions": [
+          {
+            "id": "tension_01",
+            "description": "Orphaned tension without parent",
+            "status": "active"
+          }
+        ],
+        "shared_variable_count": 0,
+        "drift_rate": 0.0,
+        "novelty_rate": 1.0,
+        "collapse_detected": false,
+        "recovery_applied": false
+      },
+      "violation": "parent_id is null for round 3, breaking chain continuity; should reference node_002",
+      "expected_result": "FAIL"
+    },
+    {
+      "name": "Inconsistent metrics - shared count mismatch",
+      "round": 3,
+      "data": {
+        "node_id": "node_003",
+        "parent_id": "node_002",
+        "round": 3,
+        "variables": [
+          "var_01", "var_02", "var_03", "var_04", "var_05",
+          "var_06", "var_07", "var_08", "var_09", "var_10",
+          "var_11", "var_12", "var_13", "var_14", "var_15",
+          "var_16", "var_17", "var_18", "var_19", "var_20",
+          "new_var_01", "new_var_02", "new_var_03", "new_var_04", "new_var_05",
+          "new_var_06", "new_var_07", "new_var_08", "new_var_09", "new_var_10"
+        ],
+        "tensions": [
+          {
+            "id": "tension_01",
+            "description": "Continuity tension",
+            "status": "active"
+          }
+        ],
+        "shared_variable_count": 15,
+        "drift_rate": 0.5,
+        "novelty_rate": 0.5,
+        "collapse_detected": false,
+        "recovery_applied": false
+      },
+      "violation": "shared_variable_count claims 15 but actual shared variables are 20; metrics inconsistent",
+      "expected_result": "FAIL"
+    }
+  ]
+}

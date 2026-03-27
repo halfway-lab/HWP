@@ -1,0 +1,170 @@
+{
+  "description": "Valid semantic group expansion samples - demonstrating proper group coherence and traceable expansion",
+  "samples": [
+    {
+      "name": "Single semantic group - stable expansion",
+      "data": {
+        "semantic_groups": [
+          {
+            "group_id": "sg_exploration_001",
+            "group_name": "Exploration Strategy",
+            "nodes": [
+              {
+                "node_id": "node_001",
+                "content": "Breadth-first exploration approach",
+                "similarity_score": 0.95
+              },
+              {
+                "node_id": "node_002",
+                "content": "Depth-first exploration alternative",
+                "similarity_score": 0.88
+              },
+              {
+                "node_id": "node_003",
+                "content": "Hybrid exploration methodology",
+                "similarity_score": 0.92
+              }
+            ],
+            "coherence_score": 0.92,
+            "expansion_path": ["node_001", "node_002", "node_003"],
+            "domain": "exploration_strategy"
+          }
+        ],
+        "group_count": 1,
+        "cross_domain_contamination": false
+      },
+      "expected_result": "PASS"
+    },
+    {
+      "name": "Multiple groups - clear boundaries",
+      "data": {
+        "semantic_groups": [
+          {
+            "group_id": "sg_ethics_001",
+            "group_name": "Ethical Considerations",
+            "nodes": [
+              {
+                "node_id": "node_004",
+                "content": "Privacy protection mechanisms",
+                "similarity_score": 0.90
+              },
+              {
+                "node_id": "node_005",
+                "content": "Data consent frameworks",
+                "similarity_score": 0.87
+              }
+            ],
+            "coherence_score": 0.88,
+            "expansion_path": ["node_004", "node_005"],
+            "domain": "ethics"
+          },
+          {
+            "group_id": "sg_technical_001",
+            "group_name": "Technical Implementation",
+            "nodes": [
+              {
+                "node_id": "node_006",
+                "content": "API design patterns",
+                "similarity_score": 0.93
+              },
+              {
+                "node_id": "node_007",
+                "content": "Database optimization techniques",
+                "similarity_score": 0.89
+              }
+            ],
+            "coherence_score": 0.91,
+            "expansion_path": ["node_006", "node_007"],
+            "domain": "technical"
+          }
+        ],
+        "group_count": 2,
+        "cross_domain_contamination": false
+      },
+      "expected_result": "PASS"
+    },
+    {
+      "name": "Group expansion - traceable lineage",
+      "data": {
+        "semantic_groups": [
+          {
+            "group_id": "sg_knowledge_001",
+            "group_name": "Knowledge Representation",
+            "nodes": [
+              {
+                "node_id": "node_008",
+                "content": "Ontology-based representation",
+                "similarity_score": 1.0,
+                "parent_node": null
+              },
+              {
+                "node_id": "node_009",
+                "content": "Semantic network extensions",
+                "similarity_score": 0.91,
+                "parent_node": "node_008"
+              },
+              {
+                "node_id": "node_010",
+                "content": "Knowledge graph embeddings",
+                "similarity_score": 0.85,
+                "parent_node": "node_009"
+              },
+              {
+                "node_id": "node_011",
+                "content": "Multi-modal knowledge fusion",
+                "similarity_score": 0.82,
+                "parent_node": "node_009"
+              }
+            ],
+            "coherence_score": 0.90,
+            "expansion_path": ["node_008", "node_009", "node_010", "node_011"],
+            "domain": "knowledge_representation"
+          }
+        ],
+        "group_count": 1,
+        "cross_domain_contamination": false
+      },
+      "expected_result": "PASS"
+    },
+    {
+      "name": "Stable group identifier - multi-round",
+      "data": {
+        "semantic_groups": [
+          {
+            "group_id": "sg_reasoning_001",
+            "group_name": "Reasoning Methods",
+            "nodes": [
+              {
+                "node_id": "node_012",
+                "content": "Deductive reasoning framework",
+                "similarity_score": 0.94
+              },
+              {
+                "node_id": "node_013",
+                "content": "Inductive reasoning patterns",
+                "similarity_score": 0.91
+              },
+              {
+                "node_id": "node_014",
+                "content": "Abductive reasoning approaches",
+                "similarity_score": 0.89
+              }
+            ],
+            "coherence_score": 0.91,
+            "expansion_path": ["node_012", "node_013", "node_014"],
+            "domain": "reasoning",
+            "group_metadata": {
+              "created_round": 1,
+              "last_expanded_round": 3,
+              "expansion_count": 2,
+              "identifier_stable": true
+            }
+          }
+        ],
+        "group_count": 1,
+        "cross_domain_contamination": false
+      },
+      "expected_result": "PASS"
+    }
+  ]
+}

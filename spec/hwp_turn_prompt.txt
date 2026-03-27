@@ -215,3 +215,95 @@ Input for this chain:
 {{input_text}}
 
 
+============================================================
+8) v0.6 DRAFT - Blind Spot Detector Fields (INCREMENT)
+============================================================
+The following fields are v0.6 draft additions for blind spot detection.
+They are additive and do not override v0.5.x stable behavior.
+
+---
+8.1) blind_spot_signals
+---
+Type: array of objects
+Description: List of detected blind spot signals in current generation.
+Each signal object contains:
+  - type: string (information_gap | logic_break | assumption_conflict | boundary_blindspot)
+  - description: string (brief explanation of the blind spot)
+  - severity: string (low | medium | high | critical)
+
+Example:
+"blind_spot_signals": [
+  {
+    "type": "information_gap",
+    "description": "User mentioned both A and B, but response only addressed A",
+    "severity": "medium"
+  },
+  {
+    "type": "logic_break",
+    "description": "Inference from step 2 to step 3 lacks supporting premise",
+    "severity": "high"
+  }
+]
+
+---
+8.2) blind_spot_score
+---
+Type: float
+Range: 0.0 to 1.0
+Description: Overall severity score of blind spots detected in this round.
+
+Interpretation:
+  - 0.0: No blind spots detected
+  - 0.1-0.3: Minor blind spots (information gaps, minor omissions)
+  - 0.4-0.6: Moderate blind spots (logic gaps, unclear assumptions)
+  - 0.7-0.9: Severe blind spots (critical omissions, conflicting assumptions)
+  - 1.0: Complete blind spot (fundamental misunderstanding of input)
+
+Example:
+"blind_spot_score": 0.45
+
+---
+8.3) blind_spot_reason
+---
+Type: string
+Description: Concise explanation of why the blind_spot_score was assigned.
+This should summarize the key issues found in blind_spot_signals.
+
+Example:
+"blind_spot_reason": "Response partially addressed user query but omitted consideration of constraint X mentioned in input"
+
+---
+8.4) Usage Notes
+---
+- These fields are OPTIONAL in v0.6 transition period
+- When present, they should be included in the top-level JSON output
+- Default values when not explicitly computed:
+  - blind_spot_signals: []
+  - blind_spot_score: 0.0
+  - blind_spot_reason: ""
+
+---
+8.5) Examples
+---
+
+Example 1 - Minimal blind spots:
+{
+  "blind_spot_signals": [],
+  "blind_spot_score": 0.0,
+  "blind_spot_reason": ""
+}
+
+Example 2 - Moderate blind spots detected:
+{
+  "blind_spot_signals": [
+    {
+      "type": "information_gap",
+      "description": "User asked about relationship between X and Y, response only covered X",
+      "severity": "medium"
+    }
+  ],
+  "blind_spot_score": 0.35,
+  "blind_spot_reason": "Partial coverage of user query - Y component not addressed"
+}
+
+

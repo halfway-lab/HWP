@@ -1,0 +1,69 @@
+{
+  "description": "Valid blind spot detection samples - all fields conform to spec v0.6",
+  "samples": [
+    {
+      "name": "Minimal - No blind spots detected",
+      "data": {
+        "blind_spot_signals": [],
+        "blind_spot_score": 0.0,
+        "blind_spot_reason": ""
+      },
+      "expected_result": "PASS"
+    },
+    {
+      "name": "Single information gap",
+      "data": {
+        "blind_spot_signals": [
+          {
+            "type": "information_gap",
+            "description": "User asked about relationship between X and Y, response only covered X",
+            "severity": "medium"
+          }
+        ],
+        "blind_spot_score": 0.35,
+        "blind_spot_reason": "Partial coverage of user query - Y component not addressed"
+      },
+      "expected_result": "PASS"
+    },
+    {
+      "name": "Multiple blind spots - high severity",
+      "data": {
+        "blind_spot_signals": [
+          {
+            "type": "logic_break",
+            "description": "Inference from step 2 to step 3 lacks supporting premise",
+            "severity": "high"
+          },
+          {
+            "type": "assumption_conflict",
+            "description": "Assumption A contradicts assumption B stated earlier",
+            "severity": "critical"
+          },
+          {
+            "type": "boundary_blindspot",
+            "description": "Edge case when input is empty not considered",
+            "severity": "low"
+          }
+        ],
+        "blind_spot_score": 0.75,
+        "blind_spot_reason": "Multiple issues: logic break, assumption conflict, and boundary blindspot detected"
+      },
+      "expected_result": "PASS"
+    },
+    {
+      "name": "Complete blind spot",
+      "data": {
+        "blind_spot_signals": [
+          {
+            "type": "information_gap",
+            "description": "Response completely misunderstood user intent",
+            "severity": "critical"
+          }
+        ],
+        "blind_spot_score": 1.0,
+        "blind_spot_reason": "Fundamental misunderstanding of input - response addresses wrong topic"
+      },
+      "expected_result": "PASS"
+    }
+  ]
+}

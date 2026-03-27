@@ -1,0 +1,136 @@
+{
+  "description": "Valid cross-round continuity samples - demonstrating proper variable inheritance and chain continuity",
+  "samples": [
+    {
+      "name": "Round 1 - Initial state",
+      "round": 1,
+      "data": {
+        "node_id": "node_001",
+        "parent_id": null,
+        "round": 1,
+        "variables": [
+          "var_01", "var_02", "var_03", "var_04", "var_05",
+          "var_06", "var_07", "var_08", "var_09", "var_10",
+          "var_11", "var_12", "var_13", "var_14", "var_15",
+          "var_16", "var_17", "var_18", "var_19", "var_20",
+          "var_21", "var_22", "var_23", "var_24", "var_25",
+          "var_26", "var_27", "var_28", "var_29", "var_30"
+        ],
+        "tensions": [
+          {
+            "id": "tension_01",
+            "description": "Exploration vs exploitation trade-off",
+            "status": "active"
+          }
+        ],
+        "shared_variable_count": 0,
+        "drift_rate": 0.0,
+        "novelty_rate": 1.0,
+        "collapse_detected": false,
+        "recovery_applied": false
+      },
+      "expected_result": "PASS"
+    },
+    {
+      "name": "Round 2 - Healthy continuity with shared variables",
+      "round": 2,
+      "data": {
+        "node_id": "node_002",
+        "parent_id": "node_001",
+        "round": 2,
+        "variables": [
+          "var_01", "var_02", "var_03", "var_04", "var_05",
+          "var_06", "var_07", "var_08", "var_09", "var_10",
+          "var_11", "var_12", "var_13", "var_14", "var_15",
+          "var_16", "var_17", "var_18", "var_19", "var_20",
+          "var_21", "var_22", "var_23", "var_24", "var_25",
+          "new_var_01", "new_var_02", "new_var_03", "new_var_04", "new_var_05"
+        ],
+        "tensions": [
+          {
+            "id": "tension_01",
+            "description": "Exploration vs exploitation trade-off",
+            "status": "continuing"
+          },
+          {
+            "id": "tension_02",
+            "description": "Depth vs breadth of analysis",
+            "status": "active"
+          }
+        ],
+        "shared_variable_count": 25,
+        "drift_rate": 0.17,
+        "novelty_rate": 0.17,
+        "collapse_detected": false,
+        "recovery_applied": false
+      },
+      "expected_result": "PASS"
+    },
+    {
+      "name": "Round 3 - Strong continuity with moderate drift",
+      "round": 3,
+      "data": {
+        "node_id": "node_003",
+        "parent_id": "node_002",
+        "round": 3,
+        "variables": [
+          "var_01", "var_02", "var_03", "var_04", "var_05",
+          "var_06", "var_07", "var_08", "var_09", "var_10",
+          "var_11", "var_12", "var_13", "var_14", "var_15",
+          "var_16", "var_17", "var_18", "var_19", "var_20",
+          "new_var_06", "new_var_07", "new_var_08", "new_var_09", "new_var_10",
+          "new_var_11", "new_var_12", "new_var_13", "new_var_14", "new_var_15"
+        ],
+        "tensions": [
+          {
+            "id": "tension_01",
+            "description": "Exploration vs exploitation trade-off",
+            "status": "evolving"
+          },
+          {
+            "id": "tension_02",
+            "description": "Depth vs breadth of analysis",
+            "status": "continuing"
+          }
+        ],
+        "shared_variable_count": 20,
+        "drift_rate": 0.33,
+        "novelty_rate": 0.33,
+        "collapse_detected": false,
+        "recovery_applied": false
+      },
+      "expected_result": "PASS"
+    },
+    {
+      "name": "Round 4 - Post-recovery stabilization",
+      "round": 4,
+      "data": {
+        "node_id": "node_004",
+        "parent_id": "node_003",
+        "round": 4,
+        "variables": [
+          "var_01", "var_02", "var_03", "var_04", "var_05",
+          "var_06", "var_07", "var_08", "var_09", "var_10",
+          "var_11", "var_12", "var_13", "var_14", "var_15",
+          "var_16", "var_17", "var_18", "var_19", "var_20",
+          "stabilized_01", "stabilized_02", "stabilized_03", "stabilized_04", "stabilized_05",
+          "stabilized_06", "stabilized_07", "stabilized_08", "stabilized_09", "stabilized_10"
+        ],
+        "tensions": [
+          {
+            "id": "tension_01",
+            "description": "Exploration vs exploitation trade-off",
+            "status": "stabilized"
+          }
+        ],
+        "shared_variable_count": 20,
+        "drift_rate": 0.33,
+        "novelty_rate": 0.33,
+        "collapse_detected": false,
+        "recovery_applied": false,
+        "parent_recovery_applied": true
+      },
+      "expected_result": "PASS"
+    }
+  ]
+}

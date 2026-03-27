@@ -1,0 +1,160 @@
+{
+  "description": "Invalid semantic group expansion samples - demonstrating group coherence violations and contamination scenarios",
+  "samples": [
+    {
+      "name": "Group ID is null - identifier broken",
+      "data": {
+        "semantic_groups": [
+          {
+            "group_id": null,
+            "group_name": "Broken Group",
+            "nodes": [
+              {
+                "node_id": "node_001",
+                "content": "Some content",
+                "similarity_score": 0.80
+              }
+            ],
+            "coherence_score": 0.80,
+            "expansion_path": ["node_001"],
+            "domain": "unknown"
+          }
+        ],
+        "group_count": 1,
+        "cross_domain_contamination": false
+      },
+      "violation": "group_id is null; semantic group identifier must be a valid string",
+      "expected_result": "FAIL"
+    },
+    {
+      "name": "Group ID changed unexpectedly - identifier unstable",
+      "data": {
+        "semantic_groups": [
+          {
+            "group_id": "sg_new_id_999",
+            "group_name": "Previously Known Group",
+            "nodes": [
+              {
+                "node_id": "node_002",
+                "content": "Related content",
+                "similarity_score": 0.85
+              }
+            ],
+            "coherence_score": 0.85,
+            "expansion_path": ["node_002"],
+            "domain": "exploration",
+            "previous_group_id": "sg_exploration_001"
+          }
+        ],
+        "group_count": 1,
+        "cross_domain_contamination": false
+      },
+      "violation": "group_id changed from sg_exploration_001 to sg_new_id_999; identifier must remain stable during expansion",
+      "expected_result": "FAIL"
+    },
+    {
+      "name": "Expansion is noise - low coherence",
+      "data": {
+        "semantic_groups": [
+          {
+            "group_id": "sg_mixed_001",
+            "group_name": "Incoherent Collection",
+            "nodes": [
+              {
+                "node_id": "node_003",
+                "content": "Machine learning algorithms",
+                "similarity_score": 1.0
+              },
+              {
+                "node_id": "node_004",
+                "content": "Ancient Greek philosophy",
+                "similarity_score": 0.15
+              },
+              {
+                "node_id": "node_005",
+                "content": "Quantum mechanics principles",
+                "similarity_score": 0.20
+              }
+            ],
+            "coherence_score": 0.45,
+            "expansion_path": ["node_003", "node_004", "node_005"],
+            "domain": "mixed"
+          }
+        ],
+        "group_count": 1,
+        "cross_domain_contamination": true
+      },
+      "violation": "coherence_score 0.45 below threshold; expansion introduces unrelated noise rather than coherent extension",
+      "expected_result": "FAIL"
+    },
+    {
+      "name": "Cross-domain contamination detected",
+      "data": {
+        "semantic_groups": [
+          {
+            "group_id": "sg_ethics_001",
+            "group_name": "Ethical Considerations",
+            "nodes": [
+              {
+                "node_id": "node_006",
+                "content": "Privacy protection mechanisms",
+                "similarity_score": 0.90
+              },
+              {
+                "node_id": "node_007",
+                "content": "Technical implementation details",
+                "similarity_score": 0.35,
+                "contamination_flag": true
+              }
+            ],
+            "coherence_score": 0.62,
+            "expansion_path": ["node_006", "node_007"],
+            "domain": "ethics",
+            "contaminated_domains": ["technical"]
+          }
+        ],
+        "group_count": 1,
+        "cross_domain_contamination": true
+      },
+      "violation": "cross_domain_contamination flag is true; node_007 from technical domain contaminated ethics group",
+      "expected_result": "FAIL"
+    },
+    {
+      "name": "Untraceable expansion - no parent reference",
+      "data": {
+        "semantic_groups": [
+          {
+            "group_id": "sg_tracking_001",
+            "group_name": "Untraceable Group",
+            "nodes": [
+              {
+                "node_id": "node_008",
+                "content": "Original concept",
+                "similarity_score": 0.90
+              },
+              {
+                "node_id": "node_009",
+                "content": "Orphaned extension",
+                "similarity_score": 0.75,
+                "parent_node": null
+              },
+              {
+                "node_id": "node_010",
+                "content": "Another orphan",
+                "similarity_score": 0.70,
+                "parent_node": null
+              }
+            ],
+            "coherence_score": 0.78,
+            "expansion_path": ["node_008", "node_009", "node_010"],
+            "domain": "tracking"
+          }
+        ],
+        "group_count": 1,
+        "cross_domain_contamination": false
+      },
+      "violation": "expansion nodes node_009 and node_010 have no parent_node reference; expansion is not traceable",
+      "expected_result": "FAIL"
+    }
+  ]
+}
