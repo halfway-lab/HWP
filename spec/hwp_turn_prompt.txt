@@ -24,6 +24,11 @@ Optional audit keys (ONLY when recovery_applied == true):
 recovery_kept_variables (array), recovery_new_variables (array)
 Do NOT output these keys when recovery_applied == false (omit entirely).
 
+Optional v0.6 additive keys:
+- blind_spot_signals (array), blind_spot_score (float), blind_spot_reason (string)
+- semantic_groups (array), group_count (int), cross_domain_contamination (boolean)
+- round_id (string), continuity_score (float), state_snapshot (object)
+
 speed_metrics must include:
 mode (Rg0|Rg1|Rg2|Rg3), unfinished_inherited_count, action_taken (array)
 
@@ -306,4 +311,92 @@ Example 2 - Moderate blind spots detected:
   "blind_spot_reason": "Partial coverage of user query - Y component not addressed"
 }
 
+---
+8.6) semantic_groups
+---
+Type: array of objects
+Description: Semantic group expansion records for the current round.
+These fields are additive in v0.6 and document whether exploration paths remain coherent.
+
+Each semantic group object should include:
+  - group_id: string
+  - group_name: string
+  - nodes: array of node objects
+  - coherence_score: float (0.0 to 1.0)
+  - expansion_path: array of node_id strings
+  - domain: string
+
+Optional semantic group metadata:
+  - group_metadata.created_round: int
+  - group_metadata.last_expanded_round: int
+  - group_metadata.expansion_count: int
+  - group_metadata.identifier_stable: boolean
+
+Semantic node object:
+  - node_id: string
+  - content: string
+  - similarity_score: float (0.0 to 1.0)
+  - parent_node: string|null (optional)
+  - contamination_flag: boolean (optional)
+
+Companion fields:
+  - group_count: integer, should equal len(semantic_groups)
+  - cross_domain_contamination: boolean, true when expansion crosses unrelated domains
+
+Example:
+{
+  "semantic_groups": [
+    {
+      "group_id": "sg_reasoning_001",
+      "group_name": "Reasoning Methods",
+      "nodes": [
+        {"node_id": "node_012", "content": "Deductive reasoning framework", "similarity_score": 0.94},
+        {"node_id": "node_013", "content": "Inductive reasoning patterns", "similarity_score": 0.91, "parent_node": "node_012"}
+      ],
+      "coherence_score": 0.91,
+      "expansion_path": ["node_012", "node_013"],
+      "domain": "reasoning"
+    }
+  ],
+  "group_count": 1,
+  "cross_domain_contamination": false
+}
+
+---
+8.7) continuity fields
+---
+Type: additive top-level fields
+Description: Cross-round continuity markers for validating state transfer between rounds.
+
+Required continuity markers when continuity is explicitly computed:
+  - round_id: string, recommended format "round_<n>"
+  - continuity_score: float (0.0 to 1.0)
+  - state_snapshot: object
+
+Recommended state_snapshot keys:
+  - inherited_variable_count: int
+  - active_tension_ids: array of strings
+  - parent_recovery_applied: boolean
+  - continuity_notes: array of strings
+
+Interpretation:
+  - continuity_score 0.0-0.3: weak continuity
+  - continuity_score 0.4-0.6: partial continuity
+  - continuity_score 0.7-0.9: strong continuity
+  - continuity_score 1.0: exact continuity preservation
+
+Example:
+{
+  "round_id": "round_3",
+  "continuity_score": 0.83,
+  "state_snapshot": {
+    "inherited_variable_count": 20,
+    "active_tension_ids": ["tension_01", "tension_02"],
+    "parent_recovery_applied": false,
+    "continuity_notes": [
+      "Preserved first 20 variables from parent",
+      "Maintained active tension lineage across rounds"
+    ]
+  }
+}
 

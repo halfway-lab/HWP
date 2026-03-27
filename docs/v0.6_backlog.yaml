@@ -31,7 +31,7 @@ queue:
   - id: "V06-001"
     title: "建立 v0.6 总体开发计划文档"
     type: "docs"
-    status: "todo"
+    status: "done"
     priority: 1
     files:
       - "docs/v0.6-plan.md"
@@ -49,7 +49,7 @@ queue:
   - id: "V06-002"
     title: "补充 v0.6 协议增量说明"
     type: "spec"
-    status: "todo"
+    status: "done"
     priority: 2
     files:
       - "docs/v0.6-plan.md"
@@ -65,7 +65,7 @@ queue:
   - id: "V06-003"
     title: "设计 blind spot detector 的输入输出字段"
     type: "spec"
-    status: "todo"
+    status: "done"
     priority: 3
     files:
       - "docs/v0.6-plan.md"
@@ -84,7 +84,7 @@ queue:
   - id: "V06-004"
     title: "设计 cross-round continuity 的验证目标"
     type: "test"
-    status: "todo"
+    status: "done"
     priority: 4
     files:
       - "docs/v0.6-tests.md"
@@ -102,7 +102,7 @@ queue:
   - id: "V06-005"
     title: "设计 semantic group expansion 的验证目标"
     type: "test"
-    status: "todo"
+    status: "done"
     priority: 5
     files:
       - "docs/v0.6-tests.md"
@@ -119,7 +119,7 @@ queue:
   - id: "V06-006"
     title: "建立 v0.6 自动运行报告模板"
     type: "docs"
-    status: "todo"
+    status: "done"
     priority: 6
     files:
       - "docs/v0.6-report-template.md"
