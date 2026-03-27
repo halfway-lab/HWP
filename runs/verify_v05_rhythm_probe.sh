@@ -108,7 +108,7 @@ for r in rounds:
 
     rhythm = r.get("rhythm")
     if not isinstance(rhythm, dict):
-        fail("Missing rhythm object (v0.5 required)", snippet=json.dumps(r, ensure_ascii=False))
+        fail("Missing rhythm object (v0.6 required)", snippet=json.dumps(r, ensure_ascii=False))
 
     rmode = rhythm.get("mode")
     if rmode not in valid_modes:
@@ -116,6 +116,13 @@ for r in rounds:
 
     if mode != rmode:
         fail("Mirror rule violated: rhythm.mode must equal speed_metrics.mode", snippet=f"round={rd} speed={mode} rhythm={rmode}")
+
+    vars_all = r.get("variables")
+    if not isinstance(vars_all, list):
+        fail("variables must be an array", snippet=json.dumps(r, ensure_ascii=False))
+    svc = r.get("shared_variable_count")
+    if not isinstance(svc, int) or svc < 0 or svc > len(vars_all):
+        fail("shared_variable_count out of valid range", snippet=f"shared={svc}, total={len(vars_all)}")
 
     hint = rhythm.get("hint")
     if hint is None:
