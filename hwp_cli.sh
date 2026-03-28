@@ -1,4 +1,7 @@
 #!/usr/bin/env bash
+# Legacy helper entrypoint kept for backward compatibility.
+# The current recommended interface is `bash runs/run_sequential.sh inputs/*.txt`
+# or `python3 -m hwp_protocol.cli ...`.
 set -euo pipefail
 
 BASE="$HOME/hwp-tests"

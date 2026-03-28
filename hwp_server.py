@@ -1,3 +1,10 @@
+"""Legacy HTTP helper kept for backward compatibility.
+
+The current recommended entry surface is the shell runner plus `hwp_protocol/`
+CLI modules. This file remains in the repository because older docs and local
+workflows may still reference it.
+"""
+
 from http.server import BaseHTTPRequestHandler, HTTPServer
 import json
 import subprocess

@@ -8,6 +8,8 @@ Moved here:
 - `hwp_cli.sh.bak_2026-03-01_0713`
 - `hwp_server.py.bak_2026-03-01_0721`
 - `inputs_v04.txt`
+- `probe`
+- `natural`
 
 These files are intentionally archived to keep the repository root focused on
 current runner, verifier, protocol-core, and documentation entrypoints.
