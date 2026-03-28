@@ -46,11 +46,13 @@ This release is considered stable when:
 - `bash runs/verify_v06_all.sh logs` returns **ALL VERIFICATIONS PASSED**
 - `python3 -m hwp_protocol.cli --help` exposes the unified protocol-core CLI successfully
 
-## v0.5.3 (Current)
+## v0.5.3 (Historical Baseline)
 
 ### Version
 - Name: **HWP v0.5.3 — RHYTHM_HINT Verification Hardening**
 - Goal: Make v0.5.x baseline **consistent, observable, and strict-pass/fail verifiable** across runner, verifier, and prompt spec.
+
+This section is kept as a historical baseline reference. The current active line is **v0.6 RC2** above.
 
 ### What changed
 1) **Version alignment**

@@ -195,7 +195,7 @@ Constraints
 - Must satisfy: entropy_target.min <= entropy_score <= entropy_target.max.
 - variable_policy.keep_prefix must be true.
 - Keep existing fields unchanged; this is an additive change only.
-### v0.5.3 Rhythm Controller Hint (Runner-injected)
+### v0.5.3 Rhythm Controller Hint (Runner-injected baseline compatibility)
 If input_text contains a line starting with:
 RHYTHM_HINT=<json>
 
@@ -210,7 +210,7 @@ RHYTHM_HINT=<json>
   - rhythm.hint_applied = true
 - For consistency:
   - speed_metrics.mode MUST equal rhythm.mode
-If RHYTHM_HINT is absent, continue v0.5 mirror behavior.
+If RHYTHM_HINT is absent, continue baseline mirror behavior.
 
 
 ============================================================
@@ -399,4 +399,3 @@ Example:
     ]
   }
 }
-

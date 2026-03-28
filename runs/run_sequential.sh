@@ -83,7 +83,7 @@ load_replay_result_json() {
   printf '%s' "$replay_line" | JQ_SAFE -c '.result // .'
 }
 
-# ---- v0.5.3 dynamic controller ----
+# ---- baseline dynamic controller compatibility layer ----
 emit_hint_json() {
   # args: mode min max keep_n new_n max_vars
   local mode="$1" mn="$2" mx="$3" keep_n="$4" new_n="$5" max_vars="$6"
@@ -149,7 +149,7 @@ while IFS= read -r line || [ -n "$line" ]; do
   echo "开始链: ${session_id}，输入: ${line}" | tee -a "$LOG_DIR/run.log"
   echo "  PROMPT_FINGERPRINT: $PROMPT_FINGERPRINT" | tee -a "$LOG_DIR/run.log"
 
-  # v0.5.3 controller state
+  # baseline controller state reused by the v0.6 RC2 runner
   base_line="$line"
   # prevent conflicts if user left RHYTHM_HINT in input accidentally
   base_line="$(printf "%s" "$base_line" | sed 's/RHYTHM_HINT=/RHYTHM_HINT_DISABLED=/g')"
