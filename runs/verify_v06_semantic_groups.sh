@@ -295,8 +295,8 @@ fi
 # 检查跨域污染（不相关的语义组混合）
 info "检查跨域污染..."
 if [ -n "$FIRST_LOG" ] && [ -f "$FIRST_LOG" ]; then
-    # 检查是否有 domain_mismatch 或 cross_domain 标记
-    CROSS_DOMAIN=$(grep -c 'domain_mismatch\|cross_domain\|group_contamination' "$FIRST_LOG" 2>/dev/null)
+    # 仅将显式 true 的污染标记视为失败，避免把字段名本身误判为污染
+    CROSS_DOMAIN=$(grep -Ec 'domain_mismatch|group_contamination|"cross_domain_contamination":[[:space:]]*true|cross_domain_contamination\\":true|"contamination_flag":[[:space:]]*true|contamination_flag\\":true' "$FIRST_LOG" 2>/dev/null)
     if [ -z "$CROSS_DOMAIN" ]; then
         CROSS_DOMAIN=0
     fi
