@@ -51,6 +51,13 @@ pip install -r requirements.txt
 export HWP_AGENT_BIN=/path/to/openclaw
 ```
 
+如果当前环境没有 `openclaw`，也可以使用已有链日志做本地回放验收：
+
+```bash
+export HWP_REPLAY_CHAIN_PATH=logs/chain_hwp_1772451330_20939.jsonl
+bash runs/run_sequential.sh inputs/probe.txt
+```
+
 ---
 
 ## 快速体验
@@ -148,6 +155,13 @@ If `openclaw` is not available in your PATH, set `HWP_AGENT_BIN` before running:
 
 ```bash
 export HWP_AGENT_BIN=/path/to/openclaw
+```
+
+For local replay without a live provider, you can also set:
+
+```bash
+export HWP_REPLAY_CHAIN_PATH=logs/chain_hwp_1772451330_20939.jsonl
+bash runs/run_sequential.sh inputs/probe.txt
 ```
 
 Output Verification

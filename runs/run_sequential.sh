@@ -23,6 +23,7 @@ ROOT_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
 LOG_DIR="$ROOT_DIR/logs"
 SPEC_PROMPT="$ROOT_DIR/spec/hwp_turn_prompt.txt"
 HWP_AGENT_BIN="${HWP_AGENT_BIN:-openclaw}"
+HWP_REPLAY_CHAIN_PATH="${HWP_REPLAY_CHAIN_PATH:-}"
 
 PROMPT_FINGERPRINT="$(grep -m1 '^PROMPT_FINGERPRINT:' "$SPEC_PROMPT" | sed -E 's/^PROMPT_FINGERPRINT:[[:space:]]*//')"
 [ -z "${PROMPT_FINGERPRINT:-}" ] && PROMPT_FINGERPRINT="(missing)"
@@ -208,11 +209,33 @@ repack_result_with_inner() {
 }
 
 require_agent_bin() {
+  if [ -n "$HWP_REPLAY_CHAIN_PATH" ]; then
+    if [ ! -f "$HWP_REPLAY_CHAIN_PATH" ]; then
+      echo "错误：回放链文件不存在: $HWP_REPLAY_CHAIN_PATH" >&2
+      exit 1
+    fi
+    return
+  fi
+
   if ! command -v "$HWP_AGENT_BIN" >/dev/null 2>&1; then
     echo "错误：未找到 agent 命令: $HWP_AGENT_BIN" >&2
     echo "请先安装/配置 OpenClaw，或通过 HWP_AGENT_BIN 指定可执行文件路径。" >&2
     exit 1
   fi
+}
+
+load_replay_result_json() {
+  local replay_path="$1"
+  local round="$2"
+  local replay_line
+
+  replay_line="$(sed -n "${round}p" "$replay_path")"
+  if [ -z "$replay_line" ]; then
+    echo "错误：回放链在第 ${round} 轮缺少数据: $replay_path" >&2
+    exit 1
+  fi
+
+  printf '%s' "$replay_line" | JQ_SAFE -c '.result // .'
 }
 
 # ---- v0.5.3 dynamic controller ----
@@ -322,24 +345,29 @@ Meta:
 
 Now run Round $r."
 
-    # 调用 OpenClaw（失败就直接 fail，不要吞掉）
-    if ! raw_output=$(OPENCLAW_LOG_LEVEL=error "$HWP_AGENT_BIN" agent --message "$msg" --session-id "$session_id" --json 2>/dev/null); then
-      echo "FAIL: openclaw agent failed at round $r" | tee -a "$LOG_DIR/run.log"
-      exit 1
+    if [ -n "$HWP_REPLAY_CHAIN_PATH" ]; then
+      echo "    [replay] using $HWP_REPLAY_CHAIN_PATH round $r" | tee -a "$LOG_DIR/run.log"
+      result_json="$(load_replay_result_json "$HWP_REPLAY_CHAIN_PATH" "$r")"
+    else
+      # 调用 OpenClaw（失败就直接 fail，不要吞掉）
+      if ! raw_output=$(OPENCLAW_LOG_LEVEL=error "$HWP_AGENT_BIN" agent --message "$msg" --session-id "$session_id" --json 2>/dev/null); then
+        echo "FAIL: openclaw agent failed at round $r" | tee -a "$LOG_DIR/run.log"
+        exit 1
+      fi
+
+      # 清洗输出：去掉 ANSI 控制字符，提取第一个 { 开始的有效 JSON
+      cleaned_json=$(printf "%s\n" "$raw_output" \
+        | sed -r 's/\x1B\[[0-9;]*[mK]//g' \
+        | awk 'BEGIN{f=0}{ if(!f){ i=index($0,"{"); if(i){ f=1; print substr($0,i) } } else { print } }')
+
+      if [ -z "$cleaned_json" ]; then
+        echo "FAIL: empty response after cleaning at round $r" | tee -a "$LOG_DIR/run.log"
+        exit 1
+      fi
+
+      # 提取 result 部分（OpenClaw 返回 JSON 结构可能包含 .result）
+      result_json=$(echo "$cleaned_json" | JQ_SAFE -c '.result // .')
     fi
-
-    # 清洗输出：去掉 ANSI 控制字符，提取第一个 { 开始的有效 JSON
-    cleaned_json=$(printf "%s\n" "$raw_output" \
-      | sed -r 's/\x1B\[[0-9;]*[mK]//g' \
-      | awk 'BEGIN{f=0}{ if(!f){ i=index($0,"{"); if(i){ f=1; print substr($0,i) } } else { print } }')
-
-    if [ -z "$cleaned_json" ]; then
-      echo "FAIL: empty response after cleaning at round $r" | tee -a "$LOG_DIR/run.log"
-      exit 1
-    fi
-
-    # 提取 result 部分（OpenClaw 返回 JSON 结构可能包含 .result）
-    result_json=$(echo "$cleaned_json" | JQ_SAFE -c '.result // .')
 
     # 提取 payload.text（应是内层 round JSON）
     txt=$(echo "$result_json" | JQ_SAFE -r '.payloads[0].text // ""')
