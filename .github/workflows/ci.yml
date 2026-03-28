@@ -1,0 +1,40 @@
+name: CI
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+
+jobs:
+  sanity-checks:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Check shell script syntax
+        run: |
+          bash -n runs/run_sequential.sh
+          bash -n runs/verify_v06_blind_spot.sh
+          bash -n runs/verify_v06_continuity.sh
+          bash -n runs/verify_v06_semantic_groups.sh
+
+      - name: Check Python compilation
+        run: |
+          python -m py_compile \
+            hwp_protocol/cli.py \
+            hwp_protocol/fixture_verify.py \
+            hwp_protocol/jsonl_utils.py \
+            hwp_protocol/log_verify.py \
+            hwp_protocol/transform.py \
+            tests/test_protocol_core.py
+
+      - name: Run protocol core unit tests
+        run: python -m unittest tests.test_protocol_core
