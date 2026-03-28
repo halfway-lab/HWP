@@ -19,6 +19,10 @@
 
 我们不输出答案。我们只扩展可能性。
 
+但这并不意味着 HWP 永远拒绝总结。更准确地说，HWP 反对的是**过早终结**，而不是反对一切收束。
+
+在协议运行阶段，HWP 负责持续展开，保留问题、分歧与多条理解路径；当某个具体应用场景需要结束时，上层应用完全可以对这段展开轨迹做后验分析、聚类、筛选与阶段性总结。换句话说，**HWP 负责生成过程的开放性，应用负责在合适时机进行有依据的收束**。
+
 核心表达只有一句话：**在路上，可以慢，不要停。**
 
 ---
@@ -133,6 +137,10 @@ Most AI tools pursue "finality" — faster summaries, more precise answers, more
 It is not another "summary/answer tool", but a thinking protocol about **"how to stay unfinished"**. It does not output conclusions; it only generates questions that can be continued, offers multiple paths of understanding, and preserves the "unfinished directions" discarded by mainstream tools.
 
 We don't output answers. We only expand possibilities.
+
+But that does not mean HWP must reject summarization forever. More precisely, HWP rejects **premature closure**, not all forms of closure.
+
+During protocol execution, HWP is responsible for keeping the process open, preserving questions, divergences, and multiple interpretive paths. When a real application needs to conclude, the application layer can still perform retrospective analysis, clustering, filtering, and stage-level summarization over the expansion trace. In other words, **HWP keeps the generation process open, while the application layer may responsibly close it when the time is right**.
 
 The core message is simple: **On the way, slow is fine, just don't stop.**
 
