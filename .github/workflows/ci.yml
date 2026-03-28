@@ -19,6 +19,9 @@ jobs:
         with:
           python-version: "3.11"
 
+      - name: Check jq availability
+        run: jq --version
+
       - name: Check shell script syntax
         run: |
           bash -n runs/run_sequential.sh
@@ -38,3 +41,8 @@ jobs:
 
       - name: Run protocol core unit tests
         run: python -m unittest tests.test_protocol_core
+
+      - name: Run replay end-to-end verification
+        run: |
+          HWP_REPLAY_CHAIN_PATH=tests/fixtures/replay_chain_rc2.jsonl HWP_ROUND_SLEEP_SEC=0 bash runs/run_sequential.sh inputs/probe.txt
+          bash runs/verify_v06_all.sh logs
