@@ -23,6 +23,8 @@ NC='\033[0m' # No Color
 
 # 默认日志目录
 LOGS_DIR="${1:-./logs}"
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+ROOT_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
 
 # Fixture 模式检测
 FIXTURE_MODE=false
@@ -61,6 +63,22 @@ info() {
     echo -e "[INFO] $1"
 }
 
+consume_log_results() {
+    local suite="$1"
+    local log_path="$2"
+    local line status message
+    while IFS= read -r line; do
+        [ -z "$line" ] && continue
+        status="${line%%|*}"
+        message="${line#*|}"
+        case "$status" in
+            PASS) pass "$message" ;;
+            WARN) warn "$message" ;;
+            FAIL) fail "$message" ;;
+        esac
+    done < <(python3 -m hwp_protocol.cli log-verify "$suite" "$log_path")
+}
+
 # 标题
 echo "========================================"
 echo "HWP v0.6 Blind Spot Detector Verify"
@@ -81,106 +99,8 @@ if [ "$FIXTURE_MODE" = true ]; then
     pass "Loading fixture: $FIXTURE_FILE"
     echo ""
     
-    # 解析并测试每个样本
-    # 使用 Python 解析 JSON（更可靠）
     if command -v python3 >/dev/null 2>&1; then
-        python3 - "$FIXTURE_TYPE" << 'PYTHON_SCRIPT'
-import json
-import sys
-
-fixture_type = sys.argv[1] if len(sys.argv) > 1 else "valid"
-fixture_file = f"./tests/fixtures/blind_spot_{fixture_type}.json"
-
-try:
-    with open(fixture_file, 'r') as f:
-        data = json.load(f)
-    
-    samples = data.get('samples', [])
-    total = len(samples)
-    passed = 0
-    failed = 0
-    
-    print(f"Testing {total} samples from {fixture_file}")
-    print("")
-    
-    for i, sample in enumerate(samples, 1):
-        name = sample.get('name', f'Sample {i}')
-        sample_data = sample.get('data', {})
-        expected = sample.get('expected_result', 'PASS')
-        violation = sample.get('violation', '')
-        
-        print(f"[{i}/{total}] {name}")
-        
-        # 验证逻辑
-        errors = []
-        
-        # 检查字段存在性
-        if 'blind_spot_score' not in sample_data:
-            errors.append("Missing blind_spot_score")
-        if 'blind_spot_signals' not in sample_data:
-            errors.append("Missing blind_spot_signals")
-        if 'blind_spot_reason' not in sample_data:
-            errors.append("Missing blind_spot_reason")
-        
-        # 检查 score 范围
-        score = sample_data.get('blind_spot_score')
-        if score is not None:
-            if not isinstance(score, (int, float)):
-                errors.append(f"blind_spot_score is not numeric: {type(score)}")
-            elif score < 0.0 or score > 1.0:
-                errors.append(f"blind_spot_score out of range: {score}")
-        
-        # 检查 signals 类型
-        signals = sample_data.get('blind_spot_signals')
-        if signals is not None and not isinstance(signals, list):
-            errors.append(f"blind_spot_signals is not array: {type(signals)}")
-        if signals is None and 'blind_spot_signals' in sample_data:
-            errors.append("blind_spot_signals is null (should be array)")
-        
-        # 检查 signal 内部结构
-        if isinstance(signals, list):
-            valid_types = {"information_gap", "logic_break", "assumption_conflict", "boundary_blindspot"}
-            valid_severities = {"low", "medium", "high", "critical"}
-            for idx, signal in enumerate(signals):
-                if isinstance(signal, dict):
-                    sig_type = signal.get('type', '')
-                    if sig_type and sig_type not in valid_types:
-                        errors.append(f"Signal[{idx}]: invalid type '{sig_type}'")
-                    severity = signal.get('severity', '')
-                    if severity and severity not in valid_severities:
-                        errors.append(f"Signal[{idx}]: invalid severity '{severity}'")
-        
-        # 判断结果
-        if expected == 'PASS':
-            if errors:
-                print(f"  [FAIL] Expected PASS but got errors:")
-                for e in errors:
-                    print(f"    - {e}")
-                failed += 1
-            else:
-                print(f"  [PASS] All validations passed")
-                passed += 1
-        else:  # expected == 'FAIL'
-            if errors:
-                print(f"  [PASS] Expected FAIL, detected errors:")
-                for e in errors:
-                    print(f"    - {e}")
-                if violation:
-                    print(f"    (Expected: {violation})")
-                passed += 1
-            else:
-                print(f"  [FAIL] Expected FAIL but no errors found")
-                failed += 1
-        print("")
-    
-    print("=" * 50)
-    print(f"Fixture Test Summary: {passed} passed, {failed} failed (total: {total})")
-    sys.exit(0 if failed == 0 else 1)
-    
-except Exception as e:
-    print(f"[ERROR] Failed to process fixture: {e}")
-    sys.exit(1)
-PYTHON_SCRIPT
+        python3 -m hwp_protocol.cli fixture-verify blind_spot "$FIXTURE_TYPE"
         exit $?
     else
         fail "Python3 not available for fixture testing"
@@ -221,109 +141,9 @@ fi
 # 检查 blind_spot_signals 字段存在
 info "检查 blind_spot_signals 字段..."
 if [ -n "$FIRST_LOG" ] && [ -f "$FIRST_LOG" ]; then
-    if grep -q '"blind_spot_signals"' "$FIRST_LOG" 2>/dev/null; then
-        pass "日志包含 blind_spot_signals 字段"
-        
-        # 检查是否为数组类型
-        ARRAY_CHECK=$(grep -o '"blind_spot_signals":\s*\[' "$FIRST_LOG" 2>/dev/null | head -1)
-        if [ -n "$ARRAY_CHECK" ]; then
-            pass "blind_spot_signals 为数组类型"
-        else
-            warn "blind_spot_signals 可能不是数组类型"
-        fi
-    else
-        warn "日志中未找到 blind_spot_signals 字段（字段为 OPTIONAL）"
-    fi
+    consume_log_results blind_spot "$FIRST_LOG"
 else
     warn "无法检查 blind_spot_signals（无日志文件）"
-fi
-
-# ==================== Success Condition 4 ====================
-# 检查 blind_spot_score 字段存在且在 0.0-1.0 范围内
-info "检查 blind_spot_score 字段..."
-if [ -n "$FIRST_LOG" ] && [ -f "$FIRST_LOG" ]; then
-    if grep -q '"blind_spot_score"' "$FIRST_LOG" 2>/dev/null; then
-        pass "日志包含 blind_spot_score 字段"
-        
-        # 提取并验证范围
-        SCORE_VALUES=$(grep -o '"blind_spot_score":\s*[0-9.]*' "$FIRST_LOG" 2>/dev/null | sed 's/.*://' | tr -d ' ')
-        if [ -n "$SCORE_VALUES" ]; then
-            for score in $SCORE_VALUES; do
-                # 使用 awk 进行浮点数比较
-                VALID_RANGE=$(echo "$score" | awk '{if ($1 >= 0.0 && $1 <= 1.0) print 1; else print 0}')
-                if [ "$VALID_RANGE" = "1" ]; then
-                    pass "blind_spot_score=$score 在有效范围 [0.0, 1.0] 内"
-                else
-                    fail "blind_spot_score=$score 超出有效范围 [0.0, 1.0]"
-                fi
-            done
-        fi
-    else
-        warn "日志中未找到 blind_spot_score 字段（字段为 OPTIONAL）"
-    fi
-else
-    warn "无法检查 blind_spot_score（无日志文件）"
-fi
-
-# ==================== Success Condition 5 ====================
-# 检查 blind_spot_reason 字段存在
-info "检查 blind_spot_reason 字段..."
-if [ -n "$FIRST_LOG" ] && [ -f "$FIRST_LOG" ]; then
-    if grep -q '"blind_spot_reason"' "$FIRST_LOG" 2>/dev/null; then
-        pass "日志包含 blind_spot_reason 字段"
-        
-        # 检查是否为字符串类型
-        STRING_CHECK=$(grep -o '"blind_spot_reason":\s*"' "$FIRST_LOG" 2>/dev/null | head -1)
-        if [ -n "$STRING_CHECK" ]; then
-            pass "blind_spot_reason 为字符串类型"
-        else
-            warn "blind_spot_reason 可能不是字符串类型"
-        fi
-    else
-        warn "日志中未找到 blind_spot_reason 字段（字段为 OPTIONAL）"
-    fi
-else
-    warn "无法检查 blind_spot_reason（无日志文件）"
-fi
-
-# ==================== Failure Condition 1 ====================
-# 检查 blind_spot_score 是否超出范围
-info "检查 blind_spot_score 范围有效性..."
-if [ -n "$FIRST_LOG" ] && [ -f "$FIRST_LOG" ]; then
-    # 查找超出范围的值
-    INVALID_SCORES=$(grep -o '"blind_spot_score":\s*[0-9.]*' "$FIRST_LOG" 2>/dev/null | sed 's/.*://' | tr -d ' ' | awk '{if ($1 < 0.0 || $1 > 1.0) print $1}')
-    if [ -n "$INVALID_SCORES" ]; then
-        for invalid in $INVALID_SCORES; do
-            fail "检测到无效的 blind_spot_score: $invalid（必须在 0.0-1.0 范围内）"
-        done
-    else
-        pass "未发现超出范围的 blind_spot_score"
-    fi
-else
-    warn "无法检查范围（无日志文件）"
-fi
-
-# ==================== Failure Condition 2 ====================
-# 检查字段类型错误
-info "检查字段类型一致性..."
-if [ -n "$FIRST_LOG" ] && [ -f "$FIRST_LOG" ]; then
-    # 检查 blind_spot_signals 是否为 null（类型错误）
-    NULL_SIGNALS=$(grep -c '"blind_spot_signals":\s*null' "$FIRST_LOG" 2>/dev/null)
-    if [ -n "$NULL_SIGNALS" ] && [ "$NULL_SIGNALS" -gt 0 ]; then
-        fail "检测到 $NULL_SIGNALS 处 blind_spot_signals 为 null（应为数组）"
-    else
-        pass "blind_spot_signals 类型正确（非 null）"
-    fi
-    
-    # 检查 blind_spot_score 是否为字符串（类型错误）
-    STRING_SCORE=$(grep -c '"blind_spot_score":\s*"' "$FIRST_LOG" 2>/dev/null)
-    if [ -n "$STRING_SCORE" ] && [ "$STRING_SCORE" -gt 0 ]; then
-        fail "检测到 $STRING_SCORE 处 blind_spot_score 为字符串（应为数值）"
-    else
-        pass "blind_spot_score 类型正确（数值型）"
-    fi
-else
-    warn "无法检查字段类型（无日志文件）"
 fi
 
 # ==================== 文档检查 ====================
