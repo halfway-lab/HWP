@@ -31,10 +31,20 @@
 4) **Verifier compatibility fix**
 - `runs/verify_v06_semantic_groups.sh` now treats only explicit contamination flags as failures, avoiding false positives caused by the field name `cross_domain_contamination`.
 
+5) **Protocol-core Python packaging**
+- v0.6 protocol-core helpers are now organized under `hwp_protocol/`.
+- `hwp_protocol/cli.py` provides a unified command entrypoint for protocol-core operations.
+- `hwp_protocol/transform.py` handles runner-side JSON enrichment and repacking.
+- `hwp_protocol/fixture_verify.py` centralizes fixture rule validation across v0.6 verifiers.
+- `hwp_protocol/log_verify.py` performs structured JSONL log checks, replacing fragile text-grep validation in the main verifier path.
+- Shell entrypoints now invoke these helpers as Python modules (`python3 -m hwp_protocol...`) for stable package resolution.
+- Minimal unit coverage now exists in `tests/test_protocol_core.py` for materialization and verifier-core behavior.
+
 ### Acceptance
 This release is considered stable when:
 - `HWP_REPLAY_CHAIN_PATH=<chain.jsonl> HWP_ROUND_SLEEP_SEC=0 bash runs/run_sequential.sh inputs/probe.txt` completes successfully
 - `bash runs/verify_v06_all.sh logs` returns **ALL VERIFICATIONS PASSED**
+- `python3 -m hwp_protocol.cli --help` exposes the unified protocol-core CLI successfully
 
 ## v0.5.3 (Current)
 

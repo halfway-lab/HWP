@@ -5,3 +5,6 @@ logs/
 reports/
 scripts/
 *.bak*
+__pycache__/
+*/__pycache__/
+*.py[cod]
