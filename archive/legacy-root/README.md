@@ -10,6 +10,8 @@ Moved here:
 - `inputs_v04.txt`
 - `probe`
 - `natural`
+- `inputs_collapse_probe.natural.txt`
+- `inputs_collapse_probe.v0.4_hardened_canonical.txt`
 
 These files are intentionally archived to keep the repository root focused on
 current runner, verifier, protocol-core, and documentation entrypoints.
