@@ -4,6 +4,7 @@ logs/
 .DS_Store
 reports/
 scripts/
+.qoder/
 *.bak*
 __pycache__/
 */__pycache__/
