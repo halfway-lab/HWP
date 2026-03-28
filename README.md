@@ -105,7 +105,8 @@ HWP 附带了两组测试输入，你可以立即体验协议的运行效果：
 
 ---
 
-***v0.5.3 发布于 2026年3月3日。这是一个开始，不是结束。***
+**当前主页状态**：仓库当前主线为 **HWP v0.6 RC2**，聚焦 runner output materialization、replay 验收、以及 `hwp_protocol/` 协议核心收口。  
+历史版本仍保留在 release notes 中，但主页说明与推荐命令已对齐当前 RC2 工作流。
 
 
 ---
@@ -168,7 +169,8 @@ git clone https://github.com/halfway-lab/HWP.git
 cd HWP
 pip install -r requirements.txt
 ```
-Quick Start
+
+## Quick Start
 HWP comes with two sets of test inputs for you to immediately experience the protocol:
 
 ```bash
@@ -193,7 +195,7 @@ export HWP_REPLAY_CHAIN_PATH=logs/chain_hwp_1772451330_20939.jsonl
 bash runs/run_sequential.sh inputs/probe.txt
 ```
 
-Output Verification
+## Output Verification
 To confirm whether a run meets the expected behavior of v0.6 RC2, you can run the unified verification script:
 
 ```bash
@@ -216,4 +218,5 @@ bash runs/verify_v06_semantic_groups.sh logs
 ```
 The verification scripts check the structure of generated results, the presence of key fields, and their alignment with expected patterns.
 
-***v0.5.3 released on March 3, 2026. This is a beginning, not an end.***
+**Current homepage state**: the repository currently tracks **HWP v0.6 RC2**, focusing on runner output materialization, replay-based acceptance, and protocol-core consolidation under `hwp_protocol/`.  
+Historical releases are still preserved in the release notes, but the homepage guidance and recommended commands now align with the RC2 workflow.
