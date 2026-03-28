@@ -1,5 +1,41 @@
 # HWP Release Notes
 
+## v0.6 RC2
+
+### Version
+- Name: **HWP v0.6 RC2 - Runner Materialization and Local Replay Verification**
+- Goal: Materialize v0.6 fields into runner output, harden provider preflight, and make RC2 verifiable even without a live `openclaw` provider.
+
+### What changed
+1) **Runner-side v0.6 materialization**
+- `runs/run_sequential.sh` now enriches each round with:
+  - `blind_spot_signals`
+  - `blind_spot_score`
+  - `blind_spot_reason`
+  - `semantic_groups`
+  - `group_count`
+  - `cross_domain_contamination`
+  - `round_id`
+  - `continuity_score`
+  - `state_snapshot`
+- Enriched inner JSON is written back into `payloads[0].text`, and key fields are projected to the outer log object for verifier compatibility.
+
+2) **Provider preflight hardening**
+- Runner startup now fails fast with a clear message when `openclaw` is not available.
+- `HWP_AGENT_BIN` can be used to point to a non-default agent binary path.
+
+3) **Replay mode for local end-to-end verification**
+- `HWP_REPLAY_CHAIN_PATH` allows the runner to replay an existing chain log round-by-round while preserving the same enrich/repack pipeline.
+- This makes RC2 verifiable in environments without a live provider.
+
+4) **Verifier compatibility fix**
+- `runs/verify_v06_semantic_groups.sh` now treats only explicit contamination flags as failures, avoiding false positives caused by the field name `cross_domain_contamination`.
+
+### Acceptance
+This release is considered stable when:
+- `HWP_REPLAY_CHAIN_PATH=<chain.jsonl> HWP_ROUND_SLEEP_SEC=0 bash runs/run_sequential.sh inputs/probe.txt` completes successfully
+- `bash runs/verify_v06_all.sh logs` returns **ALL VERIFICATIONS PASSED**
+
 ## v0.5.3 (Current)
 
 ### Version
