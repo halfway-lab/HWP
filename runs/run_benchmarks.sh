@@ -121,7 +121,13 @@ done < "$BENCHMARK_FILE"
 
 python3 "$ROOT_DIR/runs/report_benchmarks.py" "$RESULTS_TSV" "$SUMMARY_MD" > "$REPORT_DIR/summary_path.txt"
 
+# 生成回归报告（第5步新增）
+echo ""
+echo "Generating regression report..."
+python3 "$ROOT_DIR/runs/report_regression.py" "$REPORT_DIR" "$REPORT_DIR/regression.md" 2>/dev/null || echo "Regression report skipped (no baseline)"
+
 echo
 echo "Benchmark run completed."
 echo "Report directory: $REPORT_DIR"
 echo "Summary: $SUMMARY_MD"
+echo "Regression: $REPORT_DIR/regression.md"
