@@ -49,10 +49,8 @@ The package runs a local HWP chain and then compresses the chain output into a r
 ## Install
 
 ```bash
-npm install
+npm install @halfway-lab/reading-note
 ```
-
-If you install from GitHub Packages, make sure your npm auth and scope registry are configured for `@halfway-lab`.
 
 ## HWP Setup
 
