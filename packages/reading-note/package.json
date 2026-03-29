@@ -7,7 +7,8 @@
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/halfway-lab/HWP.git"
+    "url": "git+https://github.com/halfway-lab/HWP.git",
+    "directory": "packages/reading-note"
   },
   "homepage": "https://github.com/halfway-lab/HWP/tree/main/packages/reading-note",
   "bugs": {
