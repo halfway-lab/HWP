@@ -1,0 +1,12 @@
+# HWP 多 Provider 配置列表
+# 格式: provider_name|env_file|description
+#
+# 用于 run_benchmarks_multi_provider.sh 批量对比测试
+
+openclaw|provider.env|OpenClaw 默认 provider
+openrouter|provider.openrouter.env.example|OpenRouter 聚合 API
+deepseek|provider.deepseek.env.example|DeepSeek 官方 API
+groq|provider.groq.env.example|Groq 高速推理
+ollama|provider.ollama.env.example|Ollama 本地模型
+moonshot|provider.moonshot.env.example|Moonshot Kimi
+siliconflow|provider.siliconflow.env.example|SiliconFlow
