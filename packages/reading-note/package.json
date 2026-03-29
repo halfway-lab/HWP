@@ -1,0 +1,44 @@
+{
+  "name": "@halfway-lab/reading-note",
+  "version": "0.1.0",
+  "description": "Reading-note extraction built on top of a local Half Way Protocol (HWP) runner.",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/halfway-lab/HWP.git"
+  },
+  "homepage": "https://github.com/halfway-lab/HWP/tree/main/packages/reading-note",
+  "bugs": {
+    "url": "https://github.com/halfway-lab/HWP/issues"
+  },
+  "keywords": [
+    "reading-note",
+    "hwp",
+    "halfway-protocol",
+    "notes",
+    "llm"
+  ],
+  "engines": {
+    "node": ">=20"
+  },
+  "files": [
+    "dist",
+    "README.md"
+  ],
+  "scripts": {
+    "build": "rm -rf dist && tsc",
+    "test": "ts-node tests/reading-note.test.ts",
+    "prepublishOnly": "npm run build && npm test"
+  },
+  "dependencies": {},
+  "devDependencies": {
+    "typescript": "^5.0.0",
+    "ts-node": "^10.9.1",
+    "@types/node": "^20.0.0"
+  },
+  "publishConfig": {
+    "registry": "https://npm.pkg.github.com/halfway-lab"
+  }
+}
