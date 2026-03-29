@@ -235,6 +235,29 @@ async function pathExists(targetPath: string): Promise<boolean> {
   }
 }
 
+async function isHwpRepoRoot(candidate: string): Promise<boolean> {
+  const runScript = path.join(candidate, "runs", "run_sequential.sh");
+  const specFile = path.join(candidate, "spec", "hwp_turn_prompt.txt");
+  return (await pathExists(runScript)) && (await pathExists(specFile));
+}
+
+function ancestorCandidates(startPath: string, maxDepth = 5): string[] {
+  const resolved = path.resolve(startPath);
+  const candidates: string[] = [];
+  let current = resolved;
+
+  for (let depth = 0; depth <= maxDepth; depth += 1) {
+    candidates.push(current);
+    const parent = path.dirname(current);
+    if (parent === current) {
+      break;
+    }
+    current = parent;
+  }
+
+  return candidates;
+}
+
 export function buildHwpInputLine(input: ReadingNoteInput): string {
   const history = input.history && input.history.length > 0 ? input.history.join(" | ") : "无";
   const feeling = input.feeling ?? "无";
@@ -255,16 +278,16 @@ export async function resolveHwpRepoPath(): Promise<string> {
   const envRepoPath = process.env.HWP_REPO_PATH;
   const candidates = envRepoPath
     ? [envRepoPath]
-    : [
+    : uniqueNonEmpty([
+        ...ancestorCandidates(process.cwd(), 5),
+        ...ancestorCandidates(__dirname, 6),
         path.resolve(process.cwd(), "../HWP"),
         path.resolve(process.cwd(), "../../HWP"),
-        path.resolve(__dirname, "../../HWP"),
-      ];
+        path.resolve(process.cwd(), "../../../HWP"),
+      ]);
 
   for (const candidate of candidates) {
-    const runScript = path.join(candidate, "runs", "run_sequential.sh");
-    const specFile = path.join(candidate, "spec", "hwp_turn_prompt.txt");
-    if ((await pathExists(runScript)) && (await pathExists(specFile))) {
+    if (await isHwpRepoRoot(candidate)) {
       return candidate;
     }
   }

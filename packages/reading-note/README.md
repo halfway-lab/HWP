@@ -56,6 +56,9 @@ npm install @halfway-lab/reading-note
 
 This package expects a local checkout of `https://github.com/halfway-lab/HWP` and runs the HWP chain runner directly.
 
+If you are using this package outside the `HWP` monorepo, set `HWP_REPO_PATH` explicitly.
+If you are using it from `HWP/packages/reading-note`, it can auto-detect the repo root.
+
 Set the HWP repo path:
 
 ```bash

@@ -3,7 +3,7 @@ import { chmodSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync 
 import os from "node:os";
 import path from "node:path";
 import { processReadingNote } from "../src";
-import { deriveReadingNoteOutput } from "../src/hwp";
+import { deriveReadingNoteOutput, resolveHwpRepoPath } from "../src/hwp";
 
 function createFakeHwpRepo(): string {
   const repoPath = mkdtempSync(path.join(os.tmpdir(), "fake-hwp-repo-"));
@@ -140,6 +140,27 @@ async function testMissingHwpRepo() {
   }
 }
 
+async function testResolveHwpRepoPathFromMonorepoPackage() {
+  const previousRepo = process.env.HWP_REPO_PATH;
+  const originalCwd = process.cwd();
+  const packageDir = path.resolve(__dirname, "..");
+
+  delete process.env.HWP_REPO_PATH;
+  process.chdir(packageDir);
+
+  try {
+    const resolved = await resolveHwpRepoPath();
+    assert.equal(resolved, path.resolve(packageDir, "../.."));
+  } finally {
+    process.chdir(originalCwd);
+    if (previousRepo) {
+      process.env.HWP_REPO_PATH = previousRepo;
+    } else {
+      delete process.env.HWP_REPO_PATH;
+    }
+  }
+}
+
 function testAvoidBrokenFragments() {
   const result = deriveReadingNoteOutput(
     {
@@ -174,6 +195,7 @@ function testAvoidBrokenFragments() {
 async function run() {
   await testProcessReadingNoteThroughHwp();
   await testMissingHwpRepo();
+  await testResolveHwpRepoPathFromMonorepoPackage();
   testAvoidBrokenFragments();
   console.log("reading-note tests passed");
 }

@@ -174,6 +174,25 @@ async function pathExists(targetPath) {
         return false;
     }
 }
+async function isHwpRepoRoot(candidate) {
+    const runScript = node_path_1.default.join(candidate, "runs", "run_sequential.sh");
+    const specFile = node_path_1.default.join(candidate, "spec", "hwp_turn_prompt.txt");
+    return (await pathExists(runScript)) && (await pathExists(specFile));
+}
+function ancestorCandidates(startPath, maxDepth = 5) {
+    const resolved = node_path_1.default.resolve(startPath);
+    const candidates = [];
+    let current = resolved;
+    for (let depth = 0; depth <= maxDepth; depth += 1) {
+        candidates.push(current);
+        const parent = node_path_1.default.dirname(current);
+        if (parent === current) {
+            break;
+        }
+        current = parent;
+    }
+    return candidates;
+}
 function buildHwpInputLine(input) {
     const history = input.history && input.history.length > 0 ? input.history.join(" | ") : "无";
     const feeling = input.feeling ?? "无";
@@ -192,15 +211,15 @@ async function resolveHwpRepoPath() {
     const envRepoPath = process.env.HWP_REPO_PATH;
     const candidates = envRepoPath
         ? [envRepoPath]
-        : [
+        : uniqueNonEmpty([
+            ...ancestorCandidates(process.cwd(), 5),
+            ...ancestorCandidates(__dirname, 6),
             node_path_1.default.resolve(process.cwd(), "../HWP"),
             node_path_1.default.resolve(process.cwd(), "../../HWP"),
-            node_path_1.default.resolve(__dirname, "../../HWP"),
-        ];
+            node_path_1.default.resolve(process.cwd(), "../../../HWP"),
+        ]);
     for (const candidate of candidates) {
-        const runScript = node_path_1.default.join(candidate, "runs", "run_sequential.sh");
-        const specFile = node_path_1.default.join(candidate, "spec", "hwp_turn_prompt.txt");
-        if ((await pathExists(runScript)) && (await pathExists(specFile))) {
+        if (await isHwpRepoRoot(candidate)) {
             return candidate;
         }
     }
