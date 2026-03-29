@@ -1,6 +1,6 @@
 {
   "name": "@halfway-lab/reading-note",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Reading-note extraction built on top of a local Half Way Protocol (HWP) runner.",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",

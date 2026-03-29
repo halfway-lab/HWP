@@ -2,6 +2,8 @@ logs/
 *.jsonl
 *.log
 .DS_Store
+node_modules/
+*/node_modules/
 reports/
 scripts/
 .qoder/
