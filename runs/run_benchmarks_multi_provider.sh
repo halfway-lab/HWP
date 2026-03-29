@@ -97,12 +97,21 @@ echo "========================================"
 
 python3 "$ROOT_DIR/runs/report_multi_provider.py" "$MULTI_REPORT_DIR" "$MULTI_REPORT_DIR/comparison.md"
 
+# 生成失败分类报告（第4步新增）
+echo ""
+echo "========================================"
+echo "Generating Failure Classification"
+echo "========================================"
+
+python3 "$ROOT_DIR/runs/classify_failures.py" "$MULTI_REPORT_DIR" "$MULTI_REPORT_DIR/failures.md"
+
 echo
 echo "========================================"
 echo "Multi-Provider Benchmark Complete"
 echo "========================================"
 echo "Report directory: $MULTI_REPORT_DIR"
 echo "Comparison: $MULTI_REPORT_DIR/comparison.md"
+echo "Failures: $MULTI_REPORT_DIR/failures.md"
 echo
 echo "Provider Results:"
 for provider in "${!PROVIDER_REPORTS[@]}"; do
