@@ -1,6 +1,26 @@
 #!/usr/bin/env bash
 set -e
 
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+ROOT_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
+source "$SCRIPT_DIR/lib_agent.sh"
+
+usage() {
+  echo "用法: bash runs/run_parallel.sh [--config PATH] [--provider-type TYPE] [--provider-name NAME] [--agent-bin PATH] [--agent-cmd CMD] [--replay-chain PATH]"
+}
+
+parse_hwp_provider_args "$@"
+if [ -n "${HWP_SHOW_HELP:-}" ]; then
+  usage
+  exit 0
+fi
+if [ -n "${HWP_INPUT_FILE:-}" ]; then
+  echo "错误：run_parallel.sh 不接受输入文件位置参数" >&2
+  usage
+  exit 1
+fi
+resolve_hwp_provider_settings "$ROOT_DIR"
+
 # 配置
 INPUT_DIR="$HOME/hwp-tests/inputs"
 LOG_DIR="$HOME/hwp-tests/logs"
@@ -55,9 +75,9 @@ Meta:
 
 Now run Round $r."
 
-    # 调用 OpenClaw，捕获输出（包含日志前缀）
+    # 调用 agent provider，捕获输出（默认兼容 OpenClaw）
     local raw_output
-    raw_output=$(OPENCLAW_LOG_LEVEL=error openclaw agent --message "$msg" --session-id "$session_id" --json 2>/dev/null || true)
+    raw_output=$(invoke_hwp_agent "$msg" "$session_id" "$r" 2>/dev/null || true)
 
     # 清洗输出：去掉 ANSI 控制字符，提取第一个 { 开始的有效 JSON
     local cleaned_json

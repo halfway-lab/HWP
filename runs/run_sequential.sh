@@ -10,11 +10,32 @@ PYTHON_SAFE() {
   python3 "$@" || { echo "FATAL: python materializer failed" >&2; exit 1; }
 }
 
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+ROOT_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
+source "$SCRIPT_DIR/lib_agent.sh"
+
 # ---- args ----
-INPUT_FILE="${1:-}"
+usage() {
+  echo "用法: bash runs/run_sequential.sh [--config PATH] [--provider-type TYPE] [--provider-name NAME] [--agent-bin PATH] [--agent-cmd CMD] [--replay-chain PATH] inputs/probe.txt"
+}
+
+parse_hwp_provider_args "$@"
+if [ -n "${HWP_SHOW_HELP:-}" ]; then
+  usage
+  exit 0
+fi
+if [ "${HWP_INPUT_FILE:-}" = "" ]; then
+  usage
+  exit 1
+fi
+INPUT_FILE="$HWP_INPUT_FILE"
+
+ROOT_FROM_SCRIPT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+resolve_hwp_provider_settings "$ROOT_FROM_SCRIPT"
+
 if [ -z "${INPUT_FILE}" ]; then
   echo "错误：请指定输入文件路径"
-  echo "用法: bash runs/run_sequential.sh inputs/probe.txt"
+  usage
   exit 1
 fi
 if [ ! -f "${INPUT_FILE}" ]; then
@@ -22,12 +43,8 @@ if [ ! -f "${INPUT_FILE}" ]; then
   exit 1
 fi
 
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-ROOT_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
 LOG_DIR="$ROOT_DIR/logs"
 SPEC_PROMPT="$ROOT_DIR/spec/hwp_turn_prompt.txt"
-HWP_AGENT_BIN="${HWP_AGENT_BIN:-openclaw}"
-HWP_REPLAY_CHAIN_PATH="${HWP_REPLAY_CHAIN_PATH:-}"
 
 PROMPT_FINGERPRINT="$(grep -m1 '^PROMPT_FINGERPRINT:' "$SPEC_PROMPT" | sed -E 's/^PROMPT_FINGERPRINT:[[:space:]]*//')"
 [ -z "${PROMPT_FINGERPRINT:-}" ] && PROMPT_FINGERPRINT="(missing)"
@@ -51,22 +68,6 @@ repack_result_with_inner() {
   local result_json="$1"
   local inner_json="$2"
   PYTHON_SAFE -m hwp_protocol.cli transform repack "$result_json" "$inner_json"
-}
-
-require_agent_bin() {
-  if [ -n "$HWP_REPLAY_CHAIN_PATH" ]; then
-    if [ ! -f "$HWP_REPLAY_CHAIN_PATH" ]; then
-      echo "错误：回放链文件不存在: $HWP_REPLAY_CHAIN_PATH" >&2
-      exit 1
-    fi
-    return
-  fi
-
-  if ! command -v "$HWP_AGENT_BIN" >/dev/null 2>&1; then
-    echo "错误：未找到 agent 命令: $HWP_AGENT_BIN" >&2
-    echo "请先安装/配置 OpenClaw，或通过 HWP_AGENT_BIN 指定可执行文件路径。" >&2
-    exit 1
-  fi
 }
 
 load_replay_result_json() {
@@ -139,7 +140,7 @@ compute_band() {
 }
 
 # 读取输入文件，每行一条测试链
-require_agent_bin
+require_hwp_agent_provider "$HWP_REPLAY_CHAIN_PATH"
 while IFS= read -r line || [ -n "$line" ]; do
   [ -z "$line" ] && continue
 
@@ -194,9 +195,9 @@ Now run Round $r."
       echo "    [replay] using $HWP_REPLAY_CHAIN_PATH round $r" | tee -a "$LOG_DIR/run.log"
       result_json="$(load_replay_result_json "$HWP_REPLAY_CHAIN_PATH" "$r")"
     else
-      # 调用 OpenClaw（失败就直接 fail，不要吞掉）
-      if ! raw_output=$(OPENCLAW_LOG_LEVEL=error "$HWP_AGENT_BIN" agent --message "$msg" --session-id "$session_id" --json 2>/dev/null); then
-        echo "FAIL: openclaw agent failed at round $r" | tee -a "$LOG_DIR/run.log"
+      # 调用 agent provider（默认兼容 OpenClaw；也可接入自定义模型适配器）
+      if ! raw_output=$(invoke_hwp_agent "$msg" "$session_id" "$r" 2>/dev/null); then
+        echo "FAIL: agent provider failed at round $r" | tee -a "$LOG_DIR/run.log"
         exit 1
       fi
 
@@ -210,7 +211,7 @@ Now run Round $r."
         exit 1
       fi
 
-      # 提取 result 部分（OpenClaw 返回 JSON 结构可能包含 .result）
+      # 提取 result 部分（兼容 OpenClaw / 自定义适配器返回的 .result 包装）
       result_json=$(echo "$cleaned_json" | JQ_SAFE -c '.result // .')
     fi
 

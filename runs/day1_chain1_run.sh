@@ -1,6 +1,26 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+ROOT_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
+source "$SCRIPT_DIR/lib_agent.sh"
+
+usage() {
+  echo "用法: bash runs/day1_chain1_run.sh [--config PATH] [--provider-type TYPE] [--provider-name NAME] [--agent-bin PATH] [--agent-cmd CMD] [--replay-chain PATH]"
+}
+
+parse_hwp_provider_args "$@"
+if [ -n "${HWP_SHOW_HELP:-}" ]; then
+  usage
+  exit 0
+fi
+if [ -n "${HWP_INPUT_FILE:-}" ]; then
+  echo "错误：day1_chain1_run.sh 不接受输入文件位置参数" >&2
+  usage
+  exit 1
+fi
+resolve_hwp_provider_settings "$ROOT_DIR"
+
 # 输出路径
 OUT="$HOME/hwp-tests/logs/day1_chain1.jsonl"
 
@@ -34,7 +54,7 @@ Now run Round $ROUND.
 EOF
 )
 
-  RAW=$(OPENCLAW_LOG_LEVEL=error openclaw agent --message "$MSG" --session-id "$SESSION_ID" --json 2>/dev/null || true)
+  RAW=$(invoke_hwp_agent "$MSG" "$SESSION_ID" "$ROUND" 2>/dev/null || true)
 
 # 1) 去掉 ANSI 控制字符（万一有彩色）
 # 2) 从第一個 { 开始截取，剥离前置日志行
@@ -44,7 +64,7 @@ JSON_CLEAN=$(printf "%s\n" "$RAW" \
 
 # 防御：如果清洗后为空，直接报错退出
 if [ -z "$JSON_CLEAN" ]; then
-  echo "ERROR: openclaw returned empty output after cleaning." >&2
+  echo "ERROR: agent provider returned empty output after cleaning." >&2
   echo "RAW was:" >&2
   printf "%s\n" "$RAW" >&2
   exit 1

@@ -5,10 +5,19 @@
 set -euo pipefail
 
 BASE="$HOME/hwp-tests"
-INPUT="${1:-}"
+if [ "$#" -lt 1 ]; then
+  echo "Usage: $0 [--config PATH] [--provider-type TYPE] [--provider-name NAME] [--agent-bin PATH] [--agent-cmd CMD] [--replay-chain PATH] \"your input text\""
+  exit 1
+fi
+
+INPUT="${@: -1}"
+RUNNER_ARGS=()
+if [ "$#" -gt 1 ]; then
+  RUNNER_ARGS=("${@:1:$#-1}")
+fi
 
 if [ -z "$INPUT" ]; then
-  echo "Usage: $0 \"your input text\""
+  echo "Usage: $0 [--config PATH] [--provider-type TYPE] [--provider-name NAME] [--agent-bin PATH] [--agent-cmd CMD] [--replay-chain PATH] \"your input text\""
   exit 1
 fi
 
@@ -16,7 +25,7 @@ TMP_INPUT="$(mktemp)"
 echo "$INPUT" > "$TMP_INPUT"
 
 # Run one-chain sequential test (8 rounds) using the standard runner
-bash "$BASE/runs/run_sequential.sh" "$TMP_INPUT" >/dev/null
+bash "$BASE/runs/run_sequential.sh" "${RUNNER_ARGS[@]}" "$TMP_INPUT" >/dev/null
 
 rm -f "$TMP_INPUT"
 
