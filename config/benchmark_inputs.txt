@@ -1,0 +1,6 @@
+inputs/probe.txt
+inputs/natural.txt
+inputs/mixed.txt
+inputs/sparse.txt
+inputs/ideology.txt
+inputs/longchain.txt

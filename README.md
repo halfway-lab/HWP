@@ -428,6 +428,31 @@ bash runs/run_sequential.sh inputs/probe.txt
   bash runs/verify_v06_all.sh logs
   ```
 
+## Benchmark 自动化
+如果你想用固定输入集批量跑 benchmark，可以直接运行：
+
+```bash
+bash runs/run_benchmarks.sh
+```
+
+默认会读取 [benchmark_inputs.txt](/Users/mac/Documents/HWP/config/benchmark_inputs.txt)，并把结果输出到：
+
+```text
+reports/benchmarks/<timestamp>/
+```
+
+每次运行会生成：
+
+- `results.tsv`
+- `summary.md`
+- 每个 benchmark 的独立运行日志与 verifier 输出
+
+如果你想在 replay 模式下快速验证整套 benchmark 流程，可以这样运行：
+
+```bash
+HWP_REPLAY_CHAIN_PATH=logs/chain_hwp_1772451330_20939.jsonl HWP_ROUND_SLEEP_SEC=0 bash runs/run_benchmarks.sh
+```
+
 如果你想直接使用统一 Python CLI，也可以：
   ```bash
   python3 -m hwp_protocol.cli fixture-verify blind_spot valid
@@ -801,6 +826,31 @@ To confirm whether a run meets the expected behavior of v0.6 RC2, you can run th
 
 ```bash
 bash runs/verify_v06_all.sh logs
+```
+
+## Benchmark Automation
+To run the fixed benchmark set in batch, use:
+
+```bash
+bash runs/run_benchmarks.sh
+```
+
+By default it reads [benchmark_inputs.txt](/Users/mac/Documents/HWP/config/benchmark_inputs.txt) and writes results under:
+
+```text
+reports/benchmarks/<timestamp>/
+```
+
+Each run generates:
+
+- `results.tsv`
+- `summary.md`
+- per-benchmark run logs and verifier outputs
+
+To validate the whole benchmark flow quickly in replay mode:
+
+```bash
+HWP_REPLAY_CHAIN_PATH=logs/chain_hwp_1772451330_20939.jsonl HWP_ROUND_SLEEP_SEC=0 bash runs/run_benchmarks.sh
 ```
 
 If you want to use the unified Python CLI directly, you can also run:
