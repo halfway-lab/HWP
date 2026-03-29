@@ -33,6 +33,20 @@ def load_results_tsv(tsv_path: Path) -> List[Dict[str, str]]:
         return list(csv.DictReader(f, delimiter="\t"))
 
 
+def load_context(context_path: Path) -> Dict[str, str]:
+    """加载 benchmark run context.txt"""
+    data: Dict[str, str] = {}
+    if not context_path.exists():
+        return data
+
+    for raw_line in context_path.read_text(encoding="utf-8").splitlines():
+        if "=" not in raw_line:
+            continue
+        key, value = raw_line.split("=", 1)
+        data[key.strip()] = value.strip()
+    return data
+
+
 def find_baseline_report(report_root: Path, current_report: Path) -> Optional[Path]:
     """找到最近的历史基线报告"""
     current_time = datetime.fromisoformat(current_report.name.replace("T", " ").replace("_", ":"))
@@ -197,6 +211,7 @@ def generate_regression_report(
     
     # 加载当前结果
     current_results = load_results_tsv(current_report_dir / "results.tsv")
+    current_context = load_context(current_report_dir / "context.txt")
     
     if not current_results:
         output_path.write_text("# Regression Report\n\nNo current results found.\n", encoding="utf-8")
@@ -209,8 +224,10 @@ def generate_regression_report(
     
     # 加载基线结果
     baseline_results = []
+    baseline_context: Dict[str, str] = {}
     if baseline_report_dir:
         baseline_results = load_results_tsv(baseline_report_dir / "results.tsv")
+        baseline_context = load_context(baseline_report_dir / "context.txt")
     
     lines = [
         "# HWP 回归分析报告",
@@ -222,7 +239,11 @@ def generate_regression_report(
         lines.append(f"**基线报告**: {baseline_report_dir.name}")
     else:
         lines.append("**基线报告**: 无（首次运行）")
-    
+    if current_context:
+        lines.append(f"**当前 Provider**: {current_context.get('provider_type', 'unknown')}/{current_context.get('provider_name', 'unknown')}")
+    if baseline_context:
+        lines.append(f"**基线 Provider**: {baseline_context.get('provider_type', 'unknown')}/{baseline_context.get('provider_name', 'unknown')}")
+
     lines.append("")
     
     # 1. 当前运行概况
@@ -297,8 +318,10 @@ def generate_regression_report(
         "",
     ])
     
-    # 按 provider 分组（从 report_dir 名称推断）
-    provider_name = current_report_dir.parent.name if current_report_dir.parent.name != "benchmarks" else "default"
+    provider_name = "{}/{}".format(
+        current_context.get("provider_type", "unknown"),
+        current_context.get("provider_name", "unknown"),
+    )
     stability = calculate_provider_stability(current_results)
     
     if stability:

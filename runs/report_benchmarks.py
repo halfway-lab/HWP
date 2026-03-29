@@ -30,27 +30,39 @@ def summarize_results(rows: list[dict[str, str]]) -> list[str]:
         "# Benchmark Summary",
         "",
         f"- Benchmarks run: {len(rows)}",
+        f"- Provider: {rows[0].get('provider_type', 'unknown')}/{rows[0].get('provider_name', 'unknown')}" if rows else "- Provider: unknown/unknown",
         f"- Run success: {run_counts.get('pass', 0)}",
         f"- Run failed: {run_counts.get('fail', 0)}",
         f"- Structured pass: {structured_counts.get('pass', 0)}",
         f"- Blind spot pass: {blind_counts.get('pass', 0)}",
         f"- Continuity pass: {continuity_counts.get('pass', 0)}",
         f"- Semantic groups pass: {semantic_counts.get('pass', 0)}",
+        f"- Total duration (sec): {sum(int(row.get('duration_sec', '0') or 0) for row in rows)}",
         "",
-        "| benchmark | run | logs | structured | blind_spot | continuity | semantic_groups | report_dir |",
-        "| --- | --- | --- | --- | --- | --- | --- | --- |",
+        "| benchmark | run | duration_sec | logs | structured | blind_spot | continuity | semantic_groups | failure_reason | verifier_reason | report_dir |",
+        "| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |",
     ]
 
     for row in rows:
+        verifier_reason = (
+            row.get("structured_reason")
+            or row.get("blind_spot_reason")
+            or row.get("continuity_reason")
+            or row.get("semantic_groups_reason")
+            or ""
+        )
         lines.append(
-            "| {benchmark} | {run_status} | {log_count} | {structured} | {blind_spot} | {continuity} | {semantic_groups} | {report_dir} |".format(
+            "| {benchmark} | {run_status} | {duration_sec} | {log_count} | {structured} | {blind_spot} | {continuity} | {semantic_groups} | {failure_reason} | {verifier_reason} | {report_dir} |".format(
                 benchmark=row["benchmark"],
                 run_status=row["run_status"],
+                duration_sec=row.get("duration_sec", "0"),
                 log_count=row["log_count"],
                 structured=row.get("structured", "skipped"),
                 blind_spot=row["blind_spot"],
                 continuity=row["continuity"],
                 semantic_groups=row["semantic_groups"],
+                failure_reason=row.get("failure_reason", ""),
+                verifier_reason=verifier_reason,
                 report_dir=row["report_dir"],
             )
         )

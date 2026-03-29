@@ -318,6 +318,14 @@ Type: array of objects
 Description: Semantic group expansion records for the current round.
 These fields are additive in v0.6 and document whether exploration paths remain coherent.
 
+Semantic grouping rules (must follow):
+- Prefer 1 primary domain per round unless the variables truly split into clearly separate but still related subdomains.
+- Do NOT create a new semantic group just because some variables are more specific or more contemporary; specificity drift inside the same domain is still the same domain.
+- Do NOT relabel a subset of variables into an unrelated academic field unless those variables genuinely leave the chain topic.
+- If the round topic is still within one coherent domain, keep `cross_domain_contamination` = false and keep all groups inside that same domain family.
+- If any candidate group would force `cross_domain_contamination` = true, first try to merge it back into the nearest existing domain-consistent group before output.
+- `group_count` must exactly equal `len(semantic_groups)`.
+
 Each semantic group object should include:
   - group_id: string
   - group_name: string
@@ -342,6 +350,12 @@ Semantic node object:
 Companion fields:
   - group_count: integer, should equal len(semantic_groups)
   - cross_domain_contamination: boolean, true when expansion crosses unrelated domains
+
+Semantic self-check before return:
+- Verify every group's `domain` still matches the active chain topic and does not jump to an unrelated discipline.
+- Verify no group is created only from a stylistic reframing of variables that still belong to the parent domain.
+- Verify `cross_domain_contamination` is false unless there is an actual unrelated-domain jump that cannot be merged back.
+- If uncertain whether a split is cross-domain, prefer keeping the variables inside the parent domain and keep `cross_domain_contamination` false.
 
 Example:
 {

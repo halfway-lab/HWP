@@ -14,6 +14,18 @@ def clamp01(value: float) -> float:
     return value
 
 
+def clamp_int(value: Any, minimum: int, maximum: int) -> int:
+    try:
+        numeric = int(value)
+    except (TypeError, ValueError):
+        return minimum
+    if numeric < minimum:
+        return minimum
+    if numeric > maximum:
+        return maximum
+    return numeric
+
+
 def ensure_object(value: Any, label: str) -> dict[str, Any]:
     if not isinstance(value, Mapping):
         raise TypeError(f"{label} must be a JSON object")
@@ -153,12 +165,51 @@ def semantic_group_payload(variables: list[Any], round_num: int, drift: float, s
     ]
 
 
+def normalize_variable_payload(result: dict[str, Any]) -> list[str]:
+    variables = result.get("variables")
+    if not isinstance(variables, list):
+        return []
+
+    normalized = list(variables)
+    notes = []
+
+    if len(normalized) > 30:
+        notes.append(f"Trimmed variables from {len(normalized)} to protocol max 30")
+        normalized = normalized[:30]
+
+    if normalized != variables:
+        result["variables"] = normalized
+
+    shared_count = result.get("shared_variable_count")
+    if isinstance(shared_count, int) and shared_count > len(normalized):
+        result["shared_variable_count"] = len(normalized)
+        notes.append(f"Clamped shared_variable_count to {len(normalized)}")
+
+    if notes:
+        speed_metrics = result.get("speed_metrics")
+        if not isinstance(speed_metrics, Mapping):
+            speed_metrics = {}
+        else:
+            speed_metrics = dict(speed_metrics)
+        actions = speed_metrics.get("action_taken")
+        if isinstance(actions, list):
+            action_taken = list(actions)
+        else:
+            action_taken = []
+        action_taken.extend(notes)
+        speed_metrics["action_taken"] = action_taken
+        result["speed_metrics"] = speed_metrics
+
+    return normalized
+
+
 def enrich_inner_json(inner: dict[str, Any], round_num: int, parent_recovery_applied: bool) -> dict[str, Any]:
     inner = ensure_object(inner, "inner_json")
     normalized_tensions = normalize_tensions(inner)
     derived_signals = blind_spot_signals_from_paths(inner)
     result = dict(inner)
     result["tensions"] = normalized_tensions
+    variables = normalize_variable_payload(result)
 
     if "blind_spot_signals" not in result:
         result["blind_spot_signals"] = derived_signals
@@ -174,10 +225,10 @@ def enrich_inner_json(inner: dict[str, Any], round_num: int, parent_recovery_app
 
     if "semantic_groups" not in result:
         result["semantic_groups"] = semantic_group_payload(
-            result.get("variables") or [],
+            variables,
             int(result.get("round", 1)),
             float(result.get("drift_rate", 0.35)),
-            int(result.get("shared_variable_count", 0)),
+            clamp_int(result.get("shared_variable_count", 0), 0, len(variables) if variables else 0),
         )
     if "group_count" not in result:
         result["group_count"] = len(result["semantic_groups"])
@@ -186,7 +237,6 @@ def enrich_inner_json(inner: dict[str, Any], round_num: int, parent_recovery_app
     if "round_id" not in result:
         result["round_id"] = f"round_{round_num}"
     if "continuity_score" not in result:
-        variables = result.get("variables") or []
         if result.get("parent_id") is None:
             result["continuity_score"] = 1
         elif variables:

@@ -35,10 +35,18 @@ fi
   echo "started_at=$TIMESTAMP"
 } > "$REPORT_DIR/context.txt"
 
-echo -e "benchmark\tinput_path\trun_status\trun_exit_code\tlog_count\tstructured\tblind_spot\tcontinuity\tsemantic_groups\treport_dir" > "$RESULTS_TSV"
+echo -e "benchmark\tinput_path\tprovider_type\tprovider_name\trun_status\trun_exit_code\tduration_sec\tfailure_reason\tlog_count\tstructured\tstructured_reason\tblind_spot\tblind_spot_reason\tcontinuity\tcontinuity_reason\tsemantic_groups\tsemantic_groups_reason\treport_dir" > "$RESULTS_TSV"
 
 list_chain_logs() {
   find "$ROOT_DIR/logs" -maxdepth 1 -name 'chain_*.jsonl' -type f 2>/dev/null | sort
+}
+
+extract_session_ids() {
+  local run_output_path="$1"
+  if [ ! -f "$run_output_path" ]; then
+    return 0
+  fi
+  grep '^开始链:' "$run_output_path" | sed -E 's/^开始链: ([^，,]+).*/\1/' | sort -u
 }
 
 run_verifier() {
@@ -58,6 +66,41 @@ run_verifier() {
   fi
 }
 
+extract_verifier_reason() {
+  local verifier_status="$1"
+  local log_path="$2"
+
+  if [ "$verifier_status" != "fail" ] || [ ! -f "$log_path" ]; then
+    printf ''
+    return
+  fi
+
+  grep -m1 '\[FAIL\]' "$log_path" \
+    | sed -E 's/\x1B\[[0-9;]*[mK]//g' \
+    | sed -E 's/^.*\[FAIL\][[:space:]]*//' \
+    || true
+}
+
+extract_failure_reason() {
+  local run_output_path="$1"
+  if [ ! -f "$run_output_path" ]; then
+    printf 'unknown'
+    return
+  fi
+
+  if grep -q 'FAIL: agent provider failed' "$run_output_path"; then
+    printf 'agent_provider_failed'
+  elif grep -q 'FAIL: empty response after cleaning' "$run_output_path"; then
+    printf 'empty_response_after_cleaning'
+  elif grep -q 'payload.text 不是 JSON' "$run_output_path"; then
+    printf 'payload_not_json'
+  elif grep -q '错误：未找到 agent 命令' "$run_output_path"; then
+    printf 'agent_command_missing'
+  else
+    printf 'unknown'
+  fi
+}
+
 while IFS= read -r input_path || [ -n "$input_path" ]; do
   [ -z "$input_path" ] && continue
   case "$input_path" in
@@ -69,53 +112,65 @@ while IFS= read -r input_path || [ -n "$input_path" ]; do
   bench_logs_dir="$bench_dir/logs"
   mkdir -p "$bench_logs_dir"
 
-  before_file="$bench_dir/logs_before.txt"
-  after_file="$bench_dir/logs_after.txt"
-  new_file="$bench_dir/new_logs.txt"
-
-  list_chain_logs > "$before_file"
-
   run_status="pass"
   run_exit_code=0
+  failure_reason=""
+  start_time="$(date +%s)"
   if (cd "$ROOT_DIR" && bash runs/run_sequential.sh "$input_path" > "$bench_dir/run_output.log" 2>&1); then
     run_exit_code=0
   else
     run_exit_code=$?
     run_status="fail"
+    failure_reason="$(extract_failure_reason "$bench_dir/run_output.log")"
   fi
-
-  list_chain_logs > "$after_file"
-  comm -13 "$before_file" "$after_file" > "$new_file" || true
-
+  end_time="$(date +%s)"
+  duration_sec=$((end_time - start_time))
+  session_file="$bench_dir/session_ids.txt"
+  extract_session_ids "$bench_dir/run_output.log" > "$session_file"
   log_count=0
-  while IFS= read -r log_path || [ -n "$log_path" ]; do
-    [ -z "$log_path" ] && continue
-    cp "$log_path" "$bench_logs_dir/"
-    log_count=$((log_count + 1))
-  done < "$new_file"
+  while IFS= read -r session_id || [ -n "$session_id" ]; do
+    [ -z "$session_id" ] && continue
+    log_path="$ROOT_DIR/logs/chain_${session_id}.jsonl"
+    if [ -f "$log_path" ]; then
+      cp "$log_path" "$bench_logs_dir/"
+      log_count=$((log_count + 1))
+    fi
+  done < "$session_file"
 
   # 结构化验证（第2步新增）
   structured_status="$(run_verifier "verify_structured.sh" "$bench_logs_dir" "$bench_dir/verify_structured.log")"
+  structured_reason="$(extract_verifier_reason "$structured_status" "$bench_dir/verify_structured.log")"
   
   blind_status="$(run_verifier "verify_v06_blind_spot.sh" "$bench_logs_dir" "$bench_dir/verify_blind_spot.log")"
+  blind_reason="$(extract_verifier_reason "$blind_status" "$bench_dir/verify_blind_spot.log")"
   continuity_status="$(run_verifier "verify_v06_continuity.sh" "$bench_logs_dir" "$bench_dir/verify_continuity.log")"
+  continuity_reason="$(extract_verifier_reason "$continuity_status" "$bench_dir/verify_continuity.log")"
   semantic_status="$(run_verifier "verify_v06_semantic_groups.sh" "$bench_logs_dir" "$bench_dir/verify_semantic_groups.log")"
+  semantic_reason="$(extract_verifier_reason "$semantic_status" "$bench_dir/verify_semantic_groups.log")"
 
-  printf "%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\n" \
+  printf "%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\n" \
     "$benchmark_name" \
     "$input_path" \
+    "${PROVIDER_TYPE:-unknown}" \
+    "${PROVIDER_NAME:-unknown}" \
     "$run_status" \
     "$run_exit_code" \
+    "$duration_sec" \
+    "${failure_reason:-}" \
     "$log_count" \
     "$structured_status" \
+    "${structured_reason:-}" \
     "$blind_status" \
+    "${blind_reason:-}" \
     "$continuity_status" \
+    "${continuity_reason:-}" \
     "$semantic_status" \
+    "${semantic_reason:-}" \
     "$bench_dir" >> "$RESULTS_TSV"
 
   {
-    echo "[$benchmark_name] run_status=$run_status run_exit_code=$run_exit_code logs=$log_count"
-    echo "[$benchmark_name] blind_spot=$blind_status continuity=$continuity_status semantic_groups=$semantic_status"
+    echo "[$benchmark_name] run_status=$run_status run_exit_code=$run_exit_code duration_sec=$duration_sec logs=$log_count"
+    echo "[$benchmark_name] structured=$structured_status blind_spot=$blind_status continuity=$continuity_status semantic_groups=$semantic_status"
   } | tee -a "$RUN_LOG"
 done < "$BENCHMARK_FILE"
 
