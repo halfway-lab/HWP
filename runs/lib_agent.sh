@@ -133,10 +133,22 @@ load_hwp_provider_config() {
         :
         ;;
       HWP_PROVIDER_TYPE)
-        [ -n "$HWP_PROVIDER_TYPE" ] || HWP_PROVIDER_TYPE="$value"
+        if [ -z "$HWP_PROVIDER_TYPE" ]; then
+          HWP_PROVIDER_TYPE="$value"
+          export HWP_PROVIDER_TYPE
+        fi
         ;;
       HWP_PROVIDER_NAME)
-        [ -n "$HWP_PROVIDER_NAME" ] || HWP_PROVIDER_NAME="$value"
+        if [ -z "$HWP_PROVIDER_NAME" ]; then
+          HWP_PROVIDER_NAME="$value"
+          export HWP_PROVIDER_NAME
+        fi
+        ;;
+      *)
+        if [[ "$key" =~ ^[A-Za-z_][A-Za-z0-9_]*$ ]] && [ -z "${!key:-}" ]; then
+          printf -v "$key" '%s' "$value"
+          export "$key"
+        fi
         ;;
     esac
   done < "$config_path"
@@ -233,9 +245,11 @@ resolve_hwp_provider_settings() {
   fi
   if [ -n "$_hwp_cli_provider_type" ]; then
     HWP_PROVIDER_TYPE="$_hwp_cli_provider_type"
+    export HWP_PROVIDER_TYPE
   fi
   if [ -n "$_hwp_cli_provider_name" ]; then
     HWP_PROVIDER_NAME="$_hwp_cli_provider_name"
+    export HWP_PROVIDER_NAME
   fi
 
   apply_hwp_provider_defaults "$root_dir"
