@@ -21,6 +21,7 @@ def status_counter(rows: list[dict[str, str]], key: str) -> Counter[str]:
 
 def summarize_results(rows: list[dict[str, str]]) -> list[str]:
     run_counts = status_counter(rows, "run_status")
+    structured_counts = status_counter(rows, "structured")
     blind_counts = status_counter(rows, "blind_spot")
     continuity_counts = status_counter(rows, "continuity")
     semantic_counts = status_counter(rows, "semantic_groups")
@@ -31,20 +32,22 @@ def summarize_results(rows: list[dict[str, str]]) -> list[str]:
         f"- Benchmarks run: {len(rows)}",
         f"- Run success: {run_counts.get('pass', 0)}",
         f"- Run failed: {run_counts.get('fail', 0)}",
+        f"- Structured pass: {structured_counts.get('pass', 0)}",
         f"- Blind spot pass: {blind_counts.get('pass', 0)}",
         f"- Continuity pass: {continuity_counts.get('pass', 0)}",
         f"- Semantic groups pass: {semantic_counts.get('pass', 0)}",
         "",
-        "| benchmark | run | logs | blind_spot | continuity | semantic_groups | report_dir |",
-        "| --- | --- | --- | --- | --- | --- | --- |",
+        "| benchmark | run | logs | structured | blind_spot | continuity | semantic_groups | report_dir |",
+        "| --- | --- | --- | --- | --- | --- | --- | --- |",
     ]
 
     for row in rows:
         lines.append(
-            "| {benchmark} | {run_status} | {log_count} | {blind_spot} | {continuity} | {semantic_groups} | {report_dir} |".format(
+            "| {benchmark} | {run_status} | {log_count} | {structured} | {blind_spot} | {continuity} | {semantic_groups} | {report_dir} |".format(
                 benchmark=row["benchmark"],
                 run_status=row["run_status"],
                 log_count=row["log_count"],
+                structured=row.get("structured", "skipped"),
                 blind_spot=row["blind_spot"],
                 continuity=row["continuity"],
                 semantic_groups=row["semantic_groups"],

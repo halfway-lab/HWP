@@ -35,7 +35,7 @@ fi
   echo "started_at=$TIMESTAMP"
 } > "$REPORT_DIR/context.txt"
 
-echo -e "benchmark\tinput_path\trun_status\trun_exit_code\tlog_count\tblind_spot\tcontinuity\tsemantic_groups\treport_dir" > "$RESULTS_TSV"
+echo -e "benchmark\tinput_path\trun_status\trun_exit_code\tlog_count\tstructured\tblind_spot\tcontinuity\tsemantic_groups\treport_dir" > "$RESULTS_TSV"
 
 list_chain_logs() {
   find "$ROOT_DIR/logs" -maxdepth 1 -name 'chain_*.jsonl' -type f 2>/dev/null | sort
@@ -94,16 +94,20 @@ while IFS= read -r input_path || [ -n "$input_path" ]; do
     log_count=$((log_count + 1))
   done < "$new_file"
 
+  # 结构化验证（第2步新增）
+  structured_status="$(run_verifier "verify_structured.sh" "$bench_logs_dir" "$bench_dir/verify_structured.log")"
+  
   blind_status="$(run_verifier "verify_v06_blind_spot.sh" "$bench_logs_dir" "$bench_dir/verify_blind_spot.log")"
   continuity_status="$(run_verifier "verify_v06_continuity.sh" "$bench_logs_dir" "$bench_dir/verify_continuity.log")"
   semantic_status="$(run_verifier "verify_v06_semantic_groups.sh" "$bench_logs_dir" "$bench_dir/verify_semantic_groups.log")"
 
-  printf "%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\n" \
+  printf "%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\n" \
     "$benchmark_name" \
     "$input_path" \
     "$run_status" \
     "$run_exit_code" \
     "$log_count" \
+    "$structured_status" \
     "$blind_status" \
     "$continuity_status" \
     "$semantic_status" \
