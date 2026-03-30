@@ -209,9 +209,29 @@ Pre-move checklist:
 Post-move checklist:
 
 - [ ] app dev mode runs
-- [ ] app build runs
-- [ ] local DB still resolves
+- [x] app build runs
+- [x] local DB still resolves
 - [ ] app-to-HWP integration paths are repaired
+
+Current staged migration status:
+
+- a staged app copy now exists at `/Users/mac/Documents/Halfway-Lab/apps/half-note`
+- original app repo remains at `/Users/mac/Documents/Half Note/my-app`
+- staged copy was created without:
+  - `.git`
+  - `.next`
+  - `node_modules`
+  - embedded `HWP/`
+- staged copy does include:
+  - app source
+  - docs
+  - `data/`
+  - `docs/PROTOCOL_REFERENCE.md`
+- validation succeeded with:
+  - `npm install --prefer-offline --no-audit --no-fund`
+  - `npm run build`
+- embedded protocol replica is no longer inside the active app tree and is archived at:
+  - `/Users/mac/Documents/Half Note/_protocol-replicas/my-app-HWP-34d29e1`
 
 ## Batch 4: Protocol Copy Cleanup
 

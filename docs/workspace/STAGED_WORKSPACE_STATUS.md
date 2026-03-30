@@ -10,6 +10,8 @@ Current staged layout:
 
 ```text
 /Users/mac/Documents/Halfway-Lab
+  /apps
+    /half-note
   /packages
     /reading-note
   /demos
@@ -20,8 +22,6 @@ Not yet staged:
 
 - canonical protocol repo:
   - `/Users/mac/Documents/HWP`
-- app workspace:
-  - `/Users/mac/Documents/Half Note/my-app`
 - protocol copy cleanup:
   - `/Users/mac/Documents/Half Note/hwp-protocol`
 
@@ -91,6 +91,48 @@ Known remaining cleanup:
 
 - `adapter:replay` still carries a legacy fallback chain-log path
 - replay/log placement should be finalized later, together with protocol placement
+
+### Half Note App
+
+- staged location:
+  - `/Users/mac/Documents/Halfway-Lab/apps/half-note`
+- migration mode:
+  - staged copy from `my-app` while keeping the original app repo in place
+- original repo still preserved:
+  - `/Users/mac/Documents/Half Note/my-app`
+
+Staged copy excludes:
+
+- `.git`
+- `.next`
+- `node_modules`
+- embedded `HWP/`
+
+Staged copy includes:
+
+- app source
+- docs
+- local `data/`
+- `docs/PROTOCOL_REFERENCE.md`
+
+Validation completed in the staged location:
+
+- `npm install --prefer-offline --no-audit --no-fund`
+- `npm run build`
+
+Validation result:
+
+- install passed
+- build passed
+- local `data/` moved with the staged copy
+
+Embedded protocol cleanup status:
+
+- embedded `my-app/HWP` was removed from the active app tree
+- archived locally at:
+  - `/Users/mac/Documents/Half Note/_protocol-replicas/my-app-HWP-34d29e1`
+- archived snapshot commit:
+  - `34d29e1`
 
 ## Why Batch 3 Is Different
 
