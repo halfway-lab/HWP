@@ -234,6 +234,7 @@ Related document:
 - `docs/workspace/MY_APP_HWP_REMOVAL_PLAN.md`
 - `docs/workspace/MY_APP_DATA_MIGRATION_STRATEGY.md`
 - `docs/workspace/HALFWAY_LAB_DAILY_CUTOVER_DECISION.md`
+- `docs/workspace/LEGACY_PATH_RETIREMENT_STRATEGY.md`
 
 Current classification shortcut:
 
