@@ -2,7 +2,7 @@
 
 ## Goal
 
-Record the current remote state of staged repos inside `Halfway-Lab`, and define what still needs to be normalized now that daily work has cut over.
+Record the remote normalization status of staged repos inside `Halfway-Lab` now that daily work has cut over.
 
 ## Current Findings
 
@@ -14,13 +14,19 @@ Current staged canonical repo:
 
 Current `origin`:
 
-- `/Users/mac/Documents/HWP`
+- `git@github.com:halfway-lab/HWP.git`
 
 Meaning:
 
-- the new canonical working repo is still chained to the old local repo path as its remote
-- this is acceptable during local observation
-- this is not the ideal long-term remote setup for a true canonical repo
+- the new canonical working repo now points directly to the canonical GitHub remote
+- remote normalization for the staged protocol repo is complete
+- the repo was rebased onto the latest GitHub `main` and the staged cleanup commit was pushed
+
+Current local-only note:
+
+- the staged protocol repo still has an untracked local benchmark helper file:
+  - `config/benchmark_inputs.live_subset.txt`
+- this is a local observation artifact, not a remote-normalization blocker
 
 ### Staged Demo Repo
 
@@ -30,53 +36,54 @@ Current staged demo repo:
 
 Current `origin`:
 
-- `/Users/mac/Documents/halfway-demos`
+- `git@github.com:halfway-lab/demos.git`
 
 Meaning:
 
-- the staged demo repo still treats the old local demo repo as upstream
-- this is acceptable during observation
-- this should be normalized later if the staged repo becomes the stable long-term home
+- the staged demo repo now points directly to its GitHub remote
+- remote normalization for the staged demo repo is complete
+- the staged cleanup commit was pushed successfully
 
 ## Why This Matters
 
-Without remote normalization:
+Before normalization, the risk was:
 
 - pushing from the staged repo may only sync back into an old local path
 - the new workspace can look canonical locally while still depending on legacy local repos structurally
 - remote expectations become confusing for future maintenance
 
+Those risks are now resolved for the staged protocol and demo repos.
+
 ## Observation-Phase Recommendation
 
 During the observation window:
 
-- keep the current local-path remotes in place if they are helping rollback safety
-- avoid pretending that remote normalization is already finished
-- treat this as a separate infrastructure cleanup step after the path cutover stabilizes
+- keep watching for any tooling or habit that still assumes the old local repo paths
+- allow the old local paths to remain available as fallback copies only
+- treat future remote cleanup mainly as a package/app/fallback retirement concern, not as a blocker for the current cutover
 
 ## Later Normalization Targets
 
 ### Protocol
 
-Desired end state:
+Current end state:
 
 - `/Users/mac/Documents/Halfway-Lab/protocol/HWP`
-  - should point directly to the intended canonical Git remote
+  - points directly to `git@github.com:halfway-lab/HWP.git`
 
 ### Demos
 
-Desired end state:
+Current end state:
 
 - `/Users/mac/Documents/Halfway-Lab/demos/halfway-demos`
-  - should point directly to its intended long-term Git remote
+  - points directly to `git@github.com:halfway-lab/demos.git`
 
 ## Suggested Timing
 
-Do this after:
+Still worth checking later:
 
-- the observation window is stable
-- the old fallback paths are no longer being used for rollback
-- the new workspace paths are clearly accepted as the real long-term homes
+- whether additional staged repos need the same remote treatment
+- when the old local fallback repos can stop being kept around for rollback
 
 ## Related Documents
 
