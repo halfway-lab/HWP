@@ -1,2 +1,12 @@
 export * from "./types";
-export { processReadingNote } from "./pipeline";
+export {
+  processReadingNote,
+  processReadingNoteFromRounds,
+  processReadingNoteGraph,
+  processReadingNoteGraphFromRounds,
+} from "./pipeline";
+export {
+  buildHwpNoteAnalysisInput,
+  buildReadingNoteGraph,
+  createDefaultReadingNoteHwpRunner,
+} from "./hwp";

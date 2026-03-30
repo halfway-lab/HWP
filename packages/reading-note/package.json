@@ -1,9 +1,17 @@
 {
   "name": "@halfway-lab/reading-note",
-  "version": "0.1.2",
+  "version": "0.2.0",
   "description": "Reading-note extraction built on top of a local Half Way Protocol (HWP) runner.",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "require": "./dist/index.js",
+      "default": "./dist/index.js"
+    },
+    "./package.json": "./package.json"
+  },
   "license": "MIT",
   "repository": {
     "type": "git",
@@ -26,13 +34,17 @@
   },
   "files": [
     "dist",
-    "README.md"
+    "README.md",
+    "CHANGELOG.md",
+    "LICENSE"
   ],
   "scripts": {
-    "build": "rm -rf dist && tsc",
+    "clean": "node -e \"require('node:fs').rmSync('dist', { recursive: true, force: true })\"",
+    "build": "npm run clean && tsc",
     "test": "ts-node tests/reading-note.test.ts",
     "prepublishOnly": "npm run build && npm test"
   },
+  "sideEffects": false,
   "dependencies": {},
   "devDependencies": {
     "typescript": "^5.0.0",
@@ -40,6 +52,7 @@
     "@types/node": "^20.0.0"
   },
   "publishConfig": {
+    "registry": "https://registry.npmjs.org",
     "access": "public"
   }
 }

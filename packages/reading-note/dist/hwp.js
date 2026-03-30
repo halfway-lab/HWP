@@ -5,8 +5,11 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.buildHwpInputLine = buildHwpInputLine;
 exports.resolveHwpRepoPath = resolveHwpRepoPath;
+exports.createDefaultReadingNoteHwpRunner = createDefaultReadingNoteHwpRunner;
 exports.runHwpChain = runHwpChain;
 exports.deriveReadingNoteOutput = deriveReadingNoteOutput;
+exports.buildReadingNoteGraph = buildReadingNoteGraph;
+exports.buildHwpNoteAnalysisInput = buildHwpNoteAnalysisInput;
 const node_child_process_1 = require("node:child_process");
 const node_fs_1 = require("node:fs");
 const node_os_1 = __importDefault(require("node:os"));
@@ -25,6 +28,27 @@ function execFileAsync(file, args, options) {
 }
 function oneLine(value) {
     return value.replace(/\s+/g, " ").trim();
+}
+function slugify(value) {
+    return oneLine(value)
+        .toLowerCase()
+        .replace(/[^a-z0-9\u4e00-\u9fa5]+/gu, "-")
+        .replace(/^-+|-+$/g, "")
+        .slice(0, 32);
+}
+function stableSuffix(value) {
+    let hash = 0;
+    for (const char of value) {
+        hash = (hash * 31 + char.charCodeAt(0)) >>> 0;
+    }
+    return hash.toString(36).padStart(6, "0").slice(0, 6);
+}
+function normalizeHwpValue(value) {
+    return oneLine(value)
+        .replace(/\s;\s/g, "；")
+        .replace(/;/g, "；")
+        .replace(/\s\|\s/g, "｜")
+        .replace(/\|/g, "｜");
 }
 function uniqueNonEmpty(values) {
     const seen = new Set();
@@ -144,6 +168,33 @@ function summarizeBlindSpot(value) {
     }
     return compact;
 }
+function makeNoteId(input) {
+    const seed = slugify(input.text) || "reading-note";
+    const suffix = stableSuffix(JSON.stringify({
+        text: oneLine(input.text),
+        history: (input.history || []).map((item) => oneLine(item)),
+        feeling: input.feeling ?? null,
+        context: input.context ? oneLine(input.context) : null,
+    }));
+    return `note-${seed}-${suffix}`;
+}
+function makeHistoryNoteId(historyItem, index) {
+    const seed = slugify(historyItem) || `history-${index + 1}`;
+    const suffix = stableSuffix(`${index}:${oneLine(historyItem)}`);
+    return `history-${seed}-${index + 1}-${suffix}`;
+}
+function collectNeighborNoteIds(graph, focusNoteId) {
+    const neighborIds = new Set();
+    for (const link of graph.links) {
+        if (link.sourceNoteId === focusNoteId && link.targetNoteId !== focusNoteId) {
+            neighborIds.add(link.targetNoteId);
+        }
+        if (link.targetNoteId === focusNoteId && link.sourceNoteId !== focusNoteId) {
+            neighborIds.add(link.sourceNoteId);
+        }
+    }
+    return [...neighborIds];
+}
 function choosePrimaryQuestion(questions) {
     const candidates = questions
         .map((item) => summarizeQuestion(item))
@@ -193,6 +244,19 @@ function ancestorCandidates(startPath, maxDepth = 5) {
     }
     return candidates;
 }
+function pushCandidate(candidates, candidate) {
+    const resolved = node_path_1.default.resolve(candidate);
+    if (!candidates.includes(resolved)) {
+        candidates.push(resolved);
+    }
+}
+function collectHwpRepoCandidates(startPath, maxDepth, candidates) {
+    for (const ancestor of ancestorCandidates(startPath, maxDepth)) {
+        pushCandidate(candidates, ancestor);
+        pushCandidate(candidates, node_path_1.default.join(ancestor, "protocol", "HWP"));
+        pushCandidate(candidates, node_path_1.default.join(ancestor, "HWP"));
+    }
+}
 function buildHwpInputLine(input) {
     const history = input.history && input.history.length > 0 ? input.history.join(" | ") : "无";
     const feeling = input.feeling ?? "无";
@@ -200,24 +264,29 @@ function buildHwpInputLine(input) {
     return [
         "TASK=reading_note",
         "LANGUAGE=zh-CN",
-        `TEXT=${oneLine(input.text)}`,
-        `HISTORY=${oneLine(history)}`,
-        `FEELING=${oneLine(feeling)}`,
-        `CONTEXT=${oneLine(context)}`,
+        `TEXT=${normalizeHwpValue(input.text)}`,
+        `HISTORY=${normalizeHwpValue(history)}`,
+        `FEELING=${normalizeHwpValue(feeling)}`,
+        `CONTEXT=${normalizeHwpValue(context)}`,
         "INSTRUCTION=请按 HWP 协议持续展开，不要给最终答案；问题、变量、路径、张力尽量使用中文；重点围绕句子理解、关键观点、与历史记录的关联和可能的盲点。",
     ].join(" ; ");
 }
 async function resolveHwpRepoPath() {
     const envRepoPath = process.env.HWP_REPO_PATH;
-    const candidates = envRepoPath
-        ? [envRepoPath]
-        : uniqueNonEmpty([
-            ...ancestorCandidates(process.cwd(), 5),
-            ...ancestorCandidates(__dirname, 6),
-            node_path_1.default.resolve(process.cwd(), "../HWP"),
-            node_path_1.default.resolve(process.cwd(), "../../HWP"),
-            node_path_1.default.resolve(process.cwd(), "../../../HWP"),
-        ]);
+    const candidates = [];
+    if (envRepoPath) {
+        pushCandidate(candidates, envRepoPath);
+    }
+    else {
+        collectHwpRepoCandidates(process.cwd(), 5, candidates);
+        collectHwpRepoCandidates(__dirname, 6, candidates);
+        pushCandidate(candidates, node_path_1.default.resolve(process.cwd(), "../HWP"));
+        pushCandidate(candidates, node_path_1.default.resolve(process.cwd(), "../../HWP"));
+        pushCandidate(candidates, node_path_1.default.resolve(process.cwd(), "../../../HWP"));
+        pushCandidate(candidates, node_path_1.default.resolve(process.cwd(), "../../protocol/HWP"));
+        pushCandidate(candidates, node_path_1.default.resolve(__dirname, "../../protocol/HWP"));
+        pushCandidate(candidates, node_path_1.default.resolve(__dirname, "../../../protocol/HWP"));
+    }
     for (const candidate of candidates) {
         if (await isHwpRepoRoot(candidate)) {
             return candidate;
@@ -246,36 +315,55 @@ function findNewLogFile(filesBefore, filesAfter, logDir) {
     }
     return null;
 }
+function createLogBackedHwpChainGateway() {
+    return {
+        async run(context) {
+            const logDir = node_path_1.default.join(context.repoPath, "logs");
+            const filesBefore = new Set((await node_fs_1.promises.readdir(logDir).catch(() => [])));
+            const { stdout, stderr } = await execFileAsync("bash", [node_path_1.default.join(context.repoPath, "runs", "run_sequential.sh"), context.inputPath], {
+                cwd: context.repoPath,
+                env: {
+                    ...process.env,
+                    HWP_ROUND_SLEEP_SEC: process.env.HWP_ROUND_SLEEP_SEC || "0",
+                },
+            });
+            const combinedOutput = `${stdout}\n${stderr}`;
+            const sessionMatch = combinedOutput.match(/开始链:\s*([^，,\s]+)/u);
+            const sessionId = sessionMatch?.[1];
+            const filesAfter = (await node_fs_1.promises.readdir(logDir).catch(() => []));
+            const logPath = (sessionId && node_path_1.default.join(logDir, `chain_${sessionId}.jsonl`)) ||
+                findNewLogFile(filesBefore, filesAfter, logDir);
+            if (!logPath || !(await pathExists(logPath))) {
+                throw new Error("HWP runner completed but no chain log was found");
+            }
+            const logText = await node_fs_1.promises.readFile(logPath, "utf8");
+            const rounds = parseHwpLog(logText);
+            if (rounds.length === 0) {
+                throw new Error("HWP chain log was empty");
+            }
+            return { rounds };
+        },
+    };
+}
+function createDefaultHwpChainGateway() {
+    return createLogBackedHwpChainGateway();
+}
+function createDefaultReadingNoteHwpRunner() {
+    return {
+        async run(input) {
+            return runHwpChain(input);
+        },
+    };
+}
 async function runHwpChain(input) {
     const repoPath = await resolveHwpRepoPath();
     const inputDir = await node_fs_1.promises.mkdtemp(node_path_1.default.join(node_os_1.default.tmpdir(), "reading-note-hwp-"));
     const inputPath = node_path_1.default.join(inputDir, "input.txt");
-    const logDir = node_path_1.default.join(repoPath, "logs");
-    const filesBefore = new Set((await node_fs_1.promises.readdir(logDir).catch(() => [])));
     try {
         await node_fs_1.promises.writeFile(inputPath, `${buildHwpInputLine(input)}\n`, "utf8");
-        const { stdout, stderr } = await execFileAsync("bash", [node_path_1.default.join(repoPath, "runs", "run_sequential.sh"), inputPath], {
-            cwd: repoPath,
-            env: {
-                ...process.env,
-                HWP_ROUND_SLEEP_SEC: process.env.HWP_ROUND_SLEEP_SEC || "0",
-            },
-        });
-        const combinedOutput = `${stdout}\n${stderr}`;
-        const sessionMatch = combinedOutput.match(/开始链:\s*([^，,\s]+)/u);
-        const sessionId = sessionMatch?.[1];
-        const filesAfter = (await node_fs_1.promises.readdir(logDir).catch(() => []));
-        const logPath = (sessionId && node_path_1.default.join(logDir, `chain_${sessionId}.jsonl`)) ||
-            findNewLogFile(filesBefore, filesAfter, logDir);
-        if (!logPath || !(await pathExists(logPath))) {
-            throw new Error("HWP runner completed but no chain log was found");
-        }
-        const logText = await node_fs_1.promises.readFile(logPath, "utf8");
-        const rounds = parseHwpLog(logText);
-        if (rounds.length === 0) {
-            throw new Error("HWP chain log was empty");
-        }
-        return rounds;
+        const gateway = createDefaultHwpChainGateway();
+        const result = await gateway.run({ repoPath, inputPath, input });
+        return result.rounds;
     }
     finally {
         await node_fs_1.promises.rm(inputDir, { recursive: true, force: true });
@@ -331,5 +419,101 @@ function deriveReadingNoteOutput(input, rounds) {
         connection,
         blindSpot,
         tags,
+    };
+}
+function buildReadingNoteGraph(input, output) {
+    const focusNoteId = makeNoteId(input);
+    const notes = [
+        {
+            id: focusNoteId,
+            title: shortenClause(input.text, 18) || "未命名笔记",
+            body: input.text,
+            excerpt: output.summary,
+            tags: output.tags,
+            metadata: {
+                feeling: input.feeling ?? null,
+                has_connection: Boolean(output.connection),
+                has_blind_spot: Boolean(output.blindSpot),
+            },
+        },
+    ];
+    const links = [];
+    const backlinks = [];
+    const relationScores = [];
+    for (const [index, historyItem] of (input.history || []).entries()) {
+        const historyNoteId = makeHistoryNoteId(historyItem, index);
+        notes.push({
+            id: historyNoteId,
+            title: shortenClause(historyItem, 18) || `历史记录 ${index + 1}`,
+            body: historyItem,
+            excerpt: historyItem,
+            tags: output.tags.slice(0, 2),
+            metadata: {
+                source: "history",
+            },
+        });
+        const linkId = `link-${focusNoteId}-${historyNoteId}`;
+        links.push({
+            id: linkId,
+            sourceNoteId: focusNoteId,
+            targetNoteId: historyNoteId,
+            direction: "bidirectional",
+            label: "history_context",
+            contextSnippet: output.connection,
+            evidence: output.connection ? [output.connection] : undefined,
+        });
+        backlinks.push({
+            noteId: focusNoteId,
+            linkedFromNoteId: historyNoteId,
+            contextSnippet: historyItem,
+        });
+        relationScores.push({
+            relationId: linkId,
+            score: 0.72,
+            basis: "content_overlap",
+            rationale: output.connection || "历史记录为当前笔记提供显式上下文。",
+        });
+    }
+    const nodes = notes.map((note) => ({
+        id: note.id,
+        noteId: note.id,
+        label: note.title,
+        tags: note.tags,
+        degree: links.filter((link) => link.sourceNoteId === note.id || link.targetNoteId === note.id).length,
+        metadata: note.metadata,
+    }));
+    const edges = links.map((link) => ({
+        id: link.id,
+        sourceNodeId: link.sourceNoteId,
+        targetNodeId: link.targetNoteId,
+        kind: "explicit",
+        label: link.label,
+        weight: relationScores.find((score) => score.relationId === link.id)?.score,
+        relationScoreId: link.id,
+    }));
+    return {
+        notes,
+        links,
+        backlinks,
+        relationScores,
+        nodes,
+        edges,
+    };
+}
+function buildHwpNoteAnalysisInput(graph) {
+    const focusNoteIds = graph.notes.length > 0 ? [graph.notes[0].id] : [];
+    return {
+        graph,
+        focusNoteIds,
+        contextWindow: focusNoteIds[0]
+            ? {
+                focusNoteId: focusNoteIds[0],
+                neighborNoteIds: collectNeighborNoteIds(graph, focusNoteIds[0]),
+                historyNoteIds: graph.notes.slice(1).map((note) => note.id),
+                selectedTags: graph.notes[0]?.tags || [],
+            }
+            : undefined,
+        objective: "Analyze explicit note structure before HWP inference overlay.",
+        maxInferences: 8,
     };
 }
