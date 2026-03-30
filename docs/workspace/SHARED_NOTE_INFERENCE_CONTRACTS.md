@@ -73,12 +73,19 @@ Current status:
 
 - the shared TypeScript-facing contract draft now exists in:
   - `/Users/mac/Documents/Halfway-Lab/packages/reading-note/src/types.ts`
-- this is currently a schema draft, not yet a fully wired runtime pipeline
+- `reading-note` now exposes:
+  - `buildReadingNoteGraph`
+  - `buildHwpNoteAnalysisInput`
+  - `processReadingNoteGraph`
+- `HWP` now exposes a first runtime adapter through:
+  - `python3 -m hwp_protocol.cli note-infer <input_json>`
+- this runtime adapter is intentionally minimal and deterministic
+- it is suitable as a first integration layer, not yet a final inference engine
 
 ## Next Recommended Step
 
 The next implementation step should be:
 
-- make `reading-note` export a stable `NoteGraphSnapshot`
-- then add an HWP-facing adapter that consumes `HwpNoteAnalysisInput`
-- then make `Half Note` consume explicit plus inferred graph layers separately
+- make `Half Note` consume `NoteGraphSnapshot` plus `HwpInferenceBundle` as separate graph layers
+- refine the HWP inference adapter beyond the current heuristic baseline
+- decide where the long-term shared schema should live if it needs to be published or versioned independently

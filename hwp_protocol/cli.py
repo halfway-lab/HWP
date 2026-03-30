@@ -6,6 +6,7 @@ from pathlib import Path
 
 from hwp_protocol.fixture_verify import VALIDATORS, run_fixture_suite
 from hwp_protocol.log_verify import verify_blind_spot, verify_continuity, verify_semantic_groups
+from hwp_protocol.note_inference import infer_note_relations
 from hwp_protocol.transform import (
     enrich_inner_json,
     parse_bool_arg,
@@ -50,6 +51,13 @@ def cmd_log_verify(args: argparse.Namespace) -> int:
     return verifier(log_path)
 
 
+def cmd_note_infer(args: argparse.Namespace) -> int:
+    payload = parse_json_object_arg(args.input_json, "input_json")
+    output = infer_note_relations(payload)
+    print(json.dumps(output, ensure_ascii=False, separators=(",", ":")))
+    return 0
+
+
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(prog="python3 -m hwp_protocol.cli")
     subparsers = parser.add_subparsers(dest="command", required=True)
@@ -77,6 +85,10 @@ def build_parser() -> argparse.ArgumentParser:
     log_verify.add_argument("suite", choices=sorted(LOG_VERIFIERS.keys()))
     log_verify.add_argument("log_path")
     log_verify.set_defaults(func=cmd_log_verify)
+
+    note_infer = subparsers.add_parser("note-infer")
+    note_infer.add_argument("input_json")
+    note_infer.set_defaults(func=cmd_note_infer)
 
     return parser
 
