@@ -182,6 +182,7 @@ The first actual batch should be:
 Related execution doc:
 
 - `docs/workspace/PROTOCOL_REPLICA_EXECUTION_STRATEGY.md`
+- `docs/workspace/HWP_PROTOCOL_CUTOVER_CHECKLIST.md`
 
 ## Post-Reorg Product Direction
 

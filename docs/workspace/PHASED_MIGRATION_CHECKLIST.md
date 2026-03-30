@@ -271,6 +271,10 @@ Why last:
 - highest path-coupling risk
 - current main development source
 
+Related execution doc:
+
+- `docs/workspace/HWP_PROTOCOL_CUTOVER_CHECKLIST.md`
+
 Pre-move checklist:
 
 - [ ] all other project moves are already stable
