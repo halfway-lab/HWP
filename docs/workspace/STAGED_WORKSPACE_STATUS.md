@@ -225,6 +225,10 @@ Current reality:
 - `Halfway-Lab/protocol/HWP` has passed both verifier and live subset validation and is now the preferred canonical protocol path
 - old paths now primarily exist as fallback, rollback, or retirement-observation paths
 
+For the old canonical protocol path observation process, see:
+
+- `docs/workspace/OLD_HWP_OBSERVATION_AND_RETIREMENT_PLAN.md`
+
 ## Next Recommended Step
 
 Before touching Batch 3:

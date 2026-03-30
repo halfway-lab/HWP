@@ -78,3 +78,7 @@ Recommended observation window before stronger retirement actions:
 5. once protocol cutover is stable, plan retirement of:
    - `/Users/mac/Documents/Half Note/hwp-protocol`
    - later, old canonical `/Users/mac/Documents/HWP` path
+
+## Related Document
+
+- `docs/workspace/OLD_HWP_OBSERVATION_AND_RETIREMENT_PLAN.md`
