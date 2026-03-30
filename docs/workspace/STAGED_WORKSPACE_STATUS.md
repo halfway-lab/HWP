@@ -153,6 +153,7 @@ Related document:
 
 - `docs/workspace/MY_APP_MIGRATION_RISK_SUMMARY.md`
 - `docs/workspace/MY_APP_HWP_DISPOSITION_OPTIONS.md`
+- `docs/workspace/MY_APP_PROTOCOL_REFERENCE_NOTE_DRAFT.md`
 
 Current classification shortcut:
 

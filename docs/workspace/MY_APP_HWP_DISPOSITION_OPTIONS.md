@@ -142,15 +142,20 @@ Recommendation:
 
 - strongly recommended together with Option C
 
+Related draft:
+
+- `docs/workspace/MY_APP_PROTOCOL_REFERENCE_NOTE_DRAFT.md`
+
 ## Recommended Path
 
 Best practical sequence:
 
 1. Treat `my-app/HWP` as a stale full-repo replica, not a dependency.
 2. Do one final hidden-dependency sanity check during Batch 3 prep.
-3. If no hidden dependency appears, remove it from the app repo.
-4. Replace it with a lightweight reference note that points to canonical HWP.
-5. If the team still wants historical traceability, archive a named snapshot outside the active app source tree.
+3. Prepare the lightweight replacement note in advance.
+4. If no hidden dependency appears, remove it from the app repo.
+5. Replace it with a lightweight reference note that points to canonical HWP.
+6. If the team still wants historical traceability, archive a named snapshot outside the active app source tree.
 
 ## Recommended Working Decision
 
