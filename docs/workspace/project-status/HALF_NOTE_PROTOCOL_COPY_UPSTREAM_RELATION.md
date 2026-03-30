@@ -3,14 +3,17 @@
 ## Identity
 
 - Local project path: `/Users/mac/Documents/Half Note/hwp-protocol`
-- Upstream source path: `/Users/mac/Documents/HWP`
-- Upstream repo URL: not recorded in this file yet; use the canonical HWP repo remote
+- Upstream source path at the time of documentation: `/Users/mac/Documents/HWP`
+- Current canonical upstream path: `/Users/mac/Documents/Halfway-Lab/protocol/HWP`
+- Upstream repo URL: `git@github.com:halfway-lab/HWP.git`
 - Relationship type:
   - direct copy
 
 ## Source of Truth
 
-- Canonical source:
+- Canonical source now:
+  - `/Users/mac/Documents/Halfway-Lab/protocol/HWP`
+- Fallback canonical copy during observation:
   - `/Users/mac/Documents/HWP`
 - Is this project allowed to diverge long-term?
   - no
@@ -53,6 +56,7 @@
 
 ## Safe Working Rule
 
-- Protocol logic changes must be made in `/Users/mac/Documents/HWP` first.
+- Protocol logic changes must be made in `/Users/mac/Documents/Halfway-Lab/protocol/HWP` first.
+- Old `/Users/mac/Documents/HWP` should only be used as fallback during observation if needed.
 - If a local-only patch is unavoidable in the copy, document it immediately.
 - Do not treat this copy as an equal peer of the canonical HWP repo.

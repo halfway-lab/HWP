@@ -3,10 +3,10 @@
 ## Basic Info
 
 - Project name: HWP
-- Current path: `/Users/mac/Documents/HWP`
+- Current path: `/Users/mac/Documents/Halfway-Lab/protocol/HWP`
 - Repo type: standalone git repo
 - Maintainer role: protocol source repo
-- Relationship to HWP: canonical source of truth
+- Relationship to HWP: canonical protocol repo in the Halfway-Lab workspace
 
 ## Purpose
 
@@ -95,19 +95,20 @@
 - Known issues:
   - long-batch live provider stability still needs continued observation
 - Migration risks:
-  - many scripts assume current repo-root-relative paths
+  - many scripts assume repo-root-relative paths
 - Path or config coupling:
   - benchmark/report/log paths are root-relative
-  - docs and scripts reference current directory layout
+  - some historical docs still preserve pre-cutover path context
 
 ## Next Development Step
 
 - Highest-priority next task:
   - continue stabilizing long-batch live provider behavior
 - What should happen right after migration:
-  - confirm all runner/spec/test paths still resolve after relocation
+  - continue confirming runner/spec/test paths from the new canonical location
 
 ## Notes
 
-- Treat this repo as the only protocol source of truth.
+- Treat this repo as the only canonical protocol source of truth.
+- Old `/Users/mac/Documents/HWP` is now a fallback canonical copy during observation.
 - Downstream copies should not become long-term parallel protocol sources.

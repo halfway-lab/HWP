@@ -4,67 +4,78 @@
 
 Create a single, predictable workspace layout for the four active project areas under `/Users/mac/Documents`, while keeping git history intact and avoiding a risky all-at-once migration.
 
-This plan treats:
+This plan originally started from:
 
 - `/Users/mac/Documents/HWP` as the protocol source of truth
 - `/Users/mac/Documents/HWP Packages` as the package workspace
 - `/Users/mac/Documents/halfway-demos` as the demo repo
 - `/Users/mac/Documents/Half Note` as the app workspace
 
-## Current Reality
+Current reality after cutover:
+
+- canonical protocol path is now `/Users/mac/Documents/Halfway-Lab/protocol/HWP`
+- old `/Users/mac/Documents/HWP` is now a fallback canonical copy during observation
+- old package/demo/app paths are now fallback or retirement-observation paths
+
+## Historical Starting Reality
 
 ### Protocol
 
-- Path: `/Users/mac/Documents/HWP`
+- Original path: `/Users/mac/Documents/HWP`
+- Current canonical path: `/Users/mac/Documents/Halfway-Lab/protocol/HWP`
 - Git: yes
-- Role: canonical HWP protocol source
+- Role:
+  - canonical HWP protocol source moved into the Halfway-Lab workspace
 - Notes:
   - Contains protocol core, spec, runners, tests, docs, configs, adapters
-  - This is the upstream source for protocol work
+  - Old `/Users/mac/Documents/HWP` is now kept only as a fallback during observation
 
 ### Packages
 
-- Path: `/Users/mac/Documents/HWP Packages`
-- Git: no
+- Original path: `/Users/mac/Documents/HWP Packages`
+- Current preferred path: `/Users/mac/Documents/Halfway-Lab/packages/reading-note`
+- Git: no workspace repo for the old package area
 - Current child:
   - `reading-note`
 - Notes:
-  - `reading-note` has Node package structure and build artifacts
-  - This workspace should become a clean package area
+  - `reading-note` now has its preferred home under `Halfway-Lab/packages`
+  - the old package workspace is now fallback-only
 
 ### Demo
 
-- Path: `/Users/mac/Documents/halfway-demos`
+- Original path: `/Users/mac/Documents/halfway-demos`
+- Current preferred path: `/Users/mac/Documents/Halfway-Lab/demos/halfway-demos`
 - Git: yes
 - Notes:
-  - Looks like a standalone demo/tooling repo
-  - Already has its own README, docs, tools, and assets
+  - the staged demo repo is now the preferred daily path
+  - the old local demo path is now fallback-only
 
 ### App
 
-- Path: `/Users/mac/Documents/Half Note`
-- Git: no
-- Important children:
-  - `hwp-protocol` (git repo)
+- Original path: `/Users/mac/Documents/Half Note`
+- Current preferred app path: `/Users/mac/Documents/Halfway-Lab/apps/half-note`
+- Git: no top-level app workspace repo
+- Important children in the old location:
+  - `hwp-protocol` (git repo replica)
   - `my-app` (git repo)
 - Notes:
-  - `hwp-protocol` is confirmed to be a copy of `HWP`
-  - `my-app` is the actual app repo
-  - There is also a top-level product/development note file:
-    - `2026-03-29-HWP开发读书笔记APP.md`
+  - `hwp-protocol` is confirmed to be a copy of HWP
+  - `my-app` was the original app repo
+  - the old app-side embedded `HWP/` replica has already been removed from the active app tree
 
 ## Source-of-Truth Rule
 
-For protocol work:
+For protocol work now:
 
-- Source of truth: `/Users/mac/Documents/HWP`
+- Canonical source: `/Users/mac/Documents/Halfway-Lab/protocol/HWP`
+- Fallback canonical copy during observation: `/Users/mac/Documents/HWP`
 - Replica/copy: `/Users/mac/Documents/Half Note/hwp-protocol`
 
 This means the copy under `Half Note` should not be treated as a long-term independent protocol repo.
 
 ## Recommended Target Workspace
 
-Recommended future layout:
+The planned target layout is now the active working layout:
 
 ```text
 /Users/mac/Documents/Halfway-Lab
@@ -84,7 +95,8 @@ Notes:
 
 - Keep each git repo as its own repo during migration.
 - Do not force monorepo conversion in phase 1.
-- The first goal is consistent placement, not repo unification.
+- The first goal was consistent placement, not repo unification.
+- That placement goal is now largely achieved for daily work.
 
 ## Migration Principles
 
@@ -118,98 +130,3 @@ Do first:
 - Create upstream relation doc for copied protocol repo
 - Capture current run/test commands
 - Capture current repo relationships
-
-### Phase 2: Low-Risk Moves
-
-Move first:
-
-- `HWP Packages/reading-note`
-- `halfway-demos`
-
-Reason:
-
-- Lower coupling than the main protocol repo
-- Easier to repair references if needed
-
-### Phase 3: App Workspace Cleanup
-
-Then handle:
-
-- `Half Note/my-app`
-- top-level app notes/docs
-
-Also decide what to do with:
-
-- `Half Note/hwp-protocol`
-
-Preferred direction:
-
-- deprecate it as a long-term editable repo
-- replace with a documented link/reference to the canonical protocol repo
-
-### Phase 4: Protocol Workspace Placement
-
-Finally decide whether to:
-
-- move `HWP` under the new workspace root
-- or keep it where it is temporarily and only normalize the other projects first
-
-Recommended:
-
-- move protocol last, because it is the current main development source
-
-## First Batch Checklist
-
-The first actual batch should be:
-
-1. Create the backup docs for all four project areas.
-2. Create `UPSTREAM_RELATION.md` for `Half Note/hwp-protocol`.
-3. Confirm current startup/test commands for:
-   - HWP
-   - reading-note
-   - halfway-demos
-   - Half Note/my-app
-4. Only after that, begin directory migration.
-
-## Decisions Already Made
-
-- `HWP` is the canonical protocol source.
-- `Half Note/hwp-protocol` is a copied replica of `HWP`.
-- Migration should be phased.
-- Backup docs must be prepared before moving projects.
-- local protocol replicas in the Half Note workspace should not be treated as long-term peer protocol sources.
-
-Related execution doc:
-
-- `docs/workspace/PROTOCOL_REPLICA_EXECUTION_STRATEGY.md`
-- `docs/workspace/HWP_PROTOCOL_CUTOVER_CHECKLIST.md`
-
-## Post-Reorg Product Direction
-
-After the workspace structure is stabilized, the next development step should follow a clearer module split instead of mixing note logic, inference logic, and UI logic in one place.
-
-Recommended responsibility split:
-
-- `reading-note package`
-  - note model
-  - double-link parsing
-  - backlinks
-  - graph node/edge generation
-  - relation scoring
-- `HWP package`
-  - cognitive generation
-  - relation discovery
-  - implicit connection inference
-  - topic drift analysis
-  - path analysis
-- `Half Note`
-  - UI lists and note views
-  - double-link panel
-  - graph visualization
-  - node-click navigation
-
-Architectural rule:
-
-- `reading-note` owns explicit note structure
-- `HWP` owns inferred or exploratory structure
-- `Half Note` consumes those outputs and renders the user experience
