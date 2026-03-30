@@ -99,3 +99,10 @@
 ## Notes
 
 - This is a strong candidate for the first low-risk migration batch.
+- A staged migrated copy now exists at:
+  - `/Users/mac/Documents/Halfway-Lab/packages/reading-note`
+- Validation in the new location succeeded with:
+  - `npm install --prefer-offline --no-audit --no-fund`
+  - `npm run build`
+  - `npm test`
+- Original path is still being kept temporarily as fallback until downstream references are updated.

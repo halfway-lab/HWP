@@ -132,10 +132,20 @@ Pre-move checklist:
 
 Post-move checklist:
 
-- [ ] install works
-- [ ] build works
-- [ ] test works
+- [x] install works
+- [x] build works
+- [x] test works
 - [ ] any downstream references are updated
+
+Current staged migration status:
+
+- a staged copy now exists at `/Users/mac/Documents/Halfway-Lab/packages/reading-note`
+- original source at `/Users/mac/Documents/HWP Packages/reading-note` is still being kept as fallback
+- copied scope excluded local/generated items such as `.DS_Store`, `.qoder`, `node_modules`, and `dist`
+- fresh validation in the new location succeeded with:
+  - `npm install --prefer-offline --no-audit --no-fund`
+  - `npm run build`
+  - `npm test`
 
 ## Batch 2: Demo Move
 
