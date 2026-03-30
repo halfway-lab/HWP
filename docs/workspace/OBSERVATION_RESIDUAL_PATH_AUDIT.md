@@ -22,6 +22,7 @@ After the first cleanup pass:
 - active staged demo docs were refreshed to describe the new path behavior
 - active staged package docs were refreshed locally inside `Halfway-Lab`
 - active staged app protocol reference notes were refreshed locally inside `Halfway-Lab`
+- staged demo adapter scripts no longer keep `/Users/mac/Documents/HWP` as a hardcoded fallback candidate
 
 That means the most misleading active-path documentation has already been reduced.
 
@@ -67,9 +68,10 @@ These were the most important practical cleanup targets:
 
 Remaining issue:
 
-- the demo adapter scripts still keep the old path as a compatibility fallback candidate
+- the demo adapter scripts no longer use the old absolute HWP path
+- remaining compatibility logic now prefers environment override plus the new canonical workspace path
 
-This is acceptable during observation because it protects rollback safety, but it should fade out later.
+This means the highest-risk live default drift back to the old path has now been reduced.
 
 ## Recommended Cleanup Order
 
@@ -100,6 +102,6 @@ Goal:
 The observation window should continue. The next cleanup work should focus on:
 
 1. secondary historical docs inside the canonical repo
-2. eventual review of whether compatibility fallbacks can be reduced
+2. eventual review of whether any remaining compatibility fallbacks can be reduced further
 
 Those are now the highest-value remaining cleanup areas with relatively low operational risk.
