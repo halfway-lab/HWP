@@ -2,15 +2,15 @@
 
 ## Goal
 
-Define the conditions that should be satisfied before moving canonical HWP from:
+Record the conditions that were required before moving canonical HWP from:
 
 - `/Users/mac/Documents/HWP`
 
-to its intended future workspace location:
+to its workspace canonical location:
 
 - `/Users/mac/Documents/Halfway-Lab/protocol/HWP`
 
-## Why HWP Moves Last
+## Why HWP Moved Last
 
 Canonical HWP is still the most central repo in the entire workspace.
 
@@ -44,11 +44,10 @@ Already true:
 - the staged protocol clone has passed `bash runs/verify_v06_all.sh`
 - the staged protocol clone has passed a live subset baseline for `probe`, `natural`, and `mixed`
 
-Not yet true:
+Still true after cutover:
 
-- canonical HWP is still the live protocol source at `/Users/mac/Documents/HWP`
 - `/Users/mac/Documents/Half Note/hwp-protocol` still exists as a temporary local protocol replica
-- final cutover policy has not yet been declared
+- old `/Users/mac/Documents/HWP` still exists as a fallback canonical copy during observation
 
 ## Required Conditions Before Cutover
 
@@ -73,8 +72,9 @@ Confirm both of these:
 
 Desired condition:
 
-- developers have only one real protocol source in practice:
-  - `/Users/mac/Documents/HWP`
+- developers have only one real protocol source in practice before cutover
+- after cutover, that source becomes:
+  - `/Users/mac/Documents/Halfway-Lab/protocol/HWP`
 
 ### 3. Cross-Project Path Review
 
@@ -98,7 +98,7 @@ Desired condition:
 
 ### 4. Protocol Validation Baseline
 
-Immediately before cutover, confirm protocol validation from canonical HWP still passes.
+Immediately before cutover, confirm protocol validation from the staged protocol location passes.
 
 Minimum recommended checks:
 
@@ -139,14 +139,14 @@ Desired condition:
 
 Use this as the direct go/no-go list:
 
-- [ ] staged app/package/demo paths are the practical daily starting points
-- [ ] `Half Note/hwp-protocol` is no longer being treated as a working peer source
-- [ ] remaining HWP path-sensitive scripts are identified
+- [x] staged app/package/demo paths are the practical daily starting points
+- [x] `Half Note/hwp-protocol` is no longer being treated as a working peer source
+- [x] remaining HWP path-sensitive scripts are identified
 - [x] replay/log-based verifier baseline is green in the staged protocol clone
 - [x] live subset baseline is green in the staged protocol clone
 - [x] `Halfway-Lab/protocol/` target path plan is prepared
-- [ ] immediate post-move documentation edits are listed
-- [ ] fallback policy for old `/Users/mac/Documents/HWP` is decided
+- [x] immediate post-move documentation edits are listed
+- [x] fallback policy for old `/Users/mac/Documents/HWP` is decided
 
 ## Recommended Cutover Method
 
@@ -156,8 +156,8 @@ Preferred order:
 2. make a staged copy or clone of canonical HWP there
 3. validate replay/live baselines from the staged protocol location
 4. update workspace docs to point to the new canonical protocol location
-5. only then declare `Halfway-Lab/protocol/HWP` the preferred protocol path
-6. retire old `/Users/mac/Documents/HWP` later, after confidence is high
+5. declare `Halfway-Lab/protocol/HWP` the preferred canonical protocol path
+6. keep old `/Users/mac/Documents/HWP` as a fallback during observation, then retire it later
 
 This mirrors the same low-risk strategy used for the other staged workspace moves.
 
@@ -165,9 +165,10 @@ This mirrors the same low-risk strategy used for the other staged workspace move
 
 Current recommendation:
 
-- do not move canonical HWP yet
-- finish the cutover checklist first
-- then perform a staged protocol migration rather than a direct one-step move
+- canonical protocol path is now declared as:
+  - `/Users/mac/Documents/Halfway-Lab/protocol/HWP`
+- old `/Users/mac/Documents/HWP` should remain available only as a fallback during the observation period
+- `Half Note/hwp-protocol` should continue to fade out as a temporary replica, not a working peer source
 
 Related decision doc:
 

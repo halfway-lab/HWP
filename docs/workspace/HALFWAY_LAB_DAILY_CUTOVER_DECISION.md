@@ -11,11 +11,11 @@ From the current migration stage onward, the preferred daily working entry point
 - demo work:
   - `/Users/mac/Documents/Halfway-Lab/demos/halfway-demos`
 
-Canonical protocol work still remains at:
+Canonical protocol work now also uses:
 
-- `/Users/mac/Documents/HWP`
+- `/Users/mac/Documents/Halfway-Lab/protocol/HWP`
 
-This means the workspace has partially cut over for daily use, but protocol-core has not cut over yet.
+This means the workspace has now fully cut over for daily use, including protocol-core.
 
 ## What This Means In Practice
 
@@ -35,6 +35,8 @@ Use canonical HWP when doing:
 - verification logic
 - protocol-spec changes
 
+Old `/Users/mac/Documents/HWP` should now be treated as a fallback canonical copy during an observation period, not the preferred starting point for new protocol work.
+
 ## Paths By Status
 
 ### Preferred Daily Paths
@@ -42,7 +44,7 @@ Use canonical HWP when doing:
 - `/Users/mac/Documents/Halfway-Lab/apps/half-note`
 - `/Users/mac/Documents/Halfway-Lab/packages/reading-note`
 - `/Users/mac/Documents/Halfway-Lab/demos/halfway-demos`
-- `/Users/mac/Documents/HWP`
+- `/Users/mac/Documents/Halfway-Lab/protocol/HWP`
 
 ### Fallback Paths
 
@@ -61,19 +63,16 @@ These paths should not be treated as normal working sources:
 
 ## Why This Is The Right Cutover Level
 
-This partial cutover is justified because:
+This full workspace cutover is justified because:
 
 - `reading-note` staged copy has already passed install/build/test
 - `halfway-demos` staged copy has already passed install/build
 - `half-note` staged copy has already passed install/build
 - `my-app/HWP` has already been removed from the active app tree
 - `Halfway-Lab` now has a usable root README and workspace conventions doc
-
-At the same time, full protocol cutover is not yet justified because:
-
-- canonical HWP is still the live protocol source
-- `Halfway-Lab/protocol/` does not exist yet
-- the final HWP cutover checklist is not complete
+- `Halfway-Lab/protocol/HWP` staged clone has already passed `bash runs/verify_v06_all.sh`
+- `Halfway-Lab/protocol/HWP` staged clone has already passed the live subset baseline for `probe`, `natural`, and `mixed`
+- the final protocol target path now exists and has been exercised as a working repo
 
 ## Working Rule
 
@@ -82,7 +81,7 @@ Starting now:
 1. begin new app work from `Halfway-Lab/apps/half-note`
 2. begin new package work from `Halfway-Lab/packages/reading-note`
 3. begin new demo work from `Halfway-Lab/demos/halfway-demos`
-4. keep protocol-core work in `/Users/mac/Documents/HWP`
+4. begin new protocol-core work from `Halfway-Lab/protocol/HWP`
 
 If old paths are used, treat them as compatibility paths or rollback paths, not preferred daily homes.
 
@@ -90,11 +89,11 @@ If old paths are used, treat them as compatibility paths or rollback paths, not 
 
 This decision does **not** yet declare:
 
-- `Halfway-Lab` as the final home of canonical HWP
-- old paths as deleted or retired
+- old paths as deleted
 - `Half Note/hwp-protocol` as already removed
+- immediate destruction of old `/Users/mac/Documents/HWP`
 
-Those actions require the separate protocol cutover process.
+Those actions require the post-cutover observation and retirement process.
 
 ## Related Documents
 

@@ -139,8 +139,8 @@ Embedded protocol cleanup status:
 - staged location:
   - `/Users/mac/Documents/Halfway-Lab/protocol/HWP`
 - migration mode:
-  - local git clone while keeping the current canonical repo in place
-- current active canonical repo still preserved at:
+  - local git clone promoted to the new canonical workspace path after validation
+- old canonical repo still preserved at:
   - `/Users/mac/Documents/HWP`
 
 Validation completed in the staged location:
@@ -168,6 +168,12 @@ Validation result:
 Current staged protocol commit head:
 
 - `44ee0cf`
+
+Canonical path status:
+
+- preferred canonical HWP path is now:
+  - `/Users/mac/Documents/Halfway-Lab/protocol/HWP`
+- old `/Users/mac/Documents/HWP` is now a fallback canonical copy during observation
 
 ## Why Batch 3 Is Different
 
@@ -209,14 +215,15 @@ Do before staging `my-app`:
 
 ## Practical Interpretation
 
-The workspace migration is going well, but it is still in a staged phase rather than a final cutover phase.
+The workspace migration is going well, and the working layout has now cut over to `Halfway-Lab` for app, package, demo, and protocol entry points.
 
 Current reality:
 
 - `reading-note` has a validated staged home
 - `halfway-demos` has a validated staged home
-- the canonical protocol repo now also has a validated staged clone under `Halfway-Lab/protocol/HWP`
-- the app workspace is the next real complexity boundary
+- `half-note` has a validated staged home
+- `Halfway-Lab/protocol/HWP` has passed both verifier and live subset validation and is now the preferred canonical protocol path
+- old paths now primarily exist as fallback, rollback, or retirement-observation paths
 
 ## Next Recommended Step
 
