@@ -167,8 +167,11 @@ Current classification shortcut:
   - `design-system.md`
 - migration-risk-heavy:
   - `HWP/`:
-    - currently best understood as a stale full-repo replica of canonical HWP
-    - does not currently appear to be a direct runtime dependency of the app
+    - embedded copy has now been removed from the active app tree
+    - archived locally at:
+      - `/Users/mac/Documents/Half Note/_protocol-replicas/my-app-HWP-34d29e1`
+    - archived snapshot commit:
+      - `34d29e1`
   - `data/`
   - `docs/`
 - local/generated:

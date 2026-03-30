@@ -83,3 +83,25 @@ When you decide to execute cleanup rather than just prepare for it:
 2. remove only `my-app/HWP`
 3. re-check repo status
 4. then continue Batch 3 planning
+
+## Execution Status
+
+Executed cleanup step:
+
+- the embedded repo was moved out of the active app tree
+- from:
+  - `/Users/mac/Documents/Half Note/my-app/HWP`
+- to:
+  - `/Users/mac/Documents/Half Note/_protocol-replicas/my-app-HWP-34d29e1`
+
+Verification:
+
+- active app tree no longer contains `my-app/HWP`
+- archived replica still exists
+- archived git snapshot remains readable at:
+  - `34d29e1`
+
+Current interpretation:
+
+- the app repo is now cleaner from a protocol-source-of-truth perspective
+- remaining Batch 3 complexity is centered on normal app worktree cleanup and local `data/` handling rather than the embedded protocol replica
