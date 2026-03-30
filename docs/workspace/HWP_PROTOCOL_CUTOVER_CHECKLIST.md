@@ -39,6 +39,7 @@ Already true:
 - `half-note` has a validated staged home under `Halfway-Lab/apps/half-note`
 - the embedded app-side `my-app/HWP` replica has been removed from the active app tree
 - workspace entry docs now exist in `Halfway-Lab`
+- daily-use cutover for app/package/demo can now be declared separately from protocol cutover
 
 Not yet true:
 
@@ -165,3 +166,7 @@ Current recommendation:
 - do not move canonical HWP yet
 - finish the cutover checklist first
 - then perform a staged protocol migration rather than a direct one-step move
+
+Related decision doc:
+
+- `docs/workspace/HALFWAY_LAB_DAILY_CUTOVER_DECISION.md`
