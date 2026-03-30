@@ -149,6 +149,10 @@ Migration implication:
 - database files are small enough to move safely, but they are local state and must not be treated like normal source files
 - the migration plan should explicitly define whether `data/` is copied, ignored, backed up, or regenerated
 
+Related strategy:
+
+- `docs/workspace/MY_APP_DATA_MIGRATION_STRATEGY.md`
+
 ### Embedded Protocol Copy
 
 The app repo contains:

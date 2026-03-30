@@ -155,6 +155,7 @@ Related document:
 - `docs/workspace/MY_APP_HWP_DISPOSITION_OPTIONS.md`
 - `docs/workspace/MY_APP_PROTOCOL_REFERENCE_NOTE_DRAFT.md`
 - `docs/workspace/MY_APP_HWP_REMOVAL_PLAN.md`
+- `docs/workspace/MY_APP_DATA_MIGRATION_STRATEGY.md`
 
 Current classification shortcut:
 
