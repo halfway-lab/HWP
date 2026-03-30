@@ -9,6 +9,8 @@ HWP_REPLAY_CHAIN_PATH="${HWP_REPLAY_CHAIN_PATH:-}"
 HWP_PROVIDER_CONFIG="${HWP_PROVIDER_CONFIG:-}"
 HWP_PROVIDER_TYPE="${HWP_PROVIDER_TYPE:-}"
 HWP_PROVIDER_NAME="${HWP_PROVIDER_NAME:-}"
+HWP_AGENT_MAX_RETRIES="${HWP_AGENT_MAX_RETRIES:-2}"
+HWP_AGENT_RETRY_BACKOFF_SEC="${HWP_AGENT_RETRY_BACKOFF_SEC:-3}"
 
 _hwp_cli_agent_bin=""
 _hwp_cli_agent_cmd=""
@@ -285,14 +287,29 @@ invoke_hwp_agent() {
   local msg="$1"
   local session_id="$2"
   local round_num="${3:-}"
+  local max_retries="${HWP_AGENT_MAX_RETRIES:-2}"
+  local backoff_sec="${HWP_AGENT_RETRY_BACKOFF_SEC:-3}"
+  local attempt=0
 
-  if [ -n "$HWP_AGENT_CMD" ]; then
-    HWP_AGENT_MESSAGE="$msg" \
-    HWP_AGENT_SESSION_ID="$session_id" \
-    HWP_AGENT_ROUND="$round_num" \
-    /bin/sh -c "$HWP_AGENT_CMD"
-    return
-  fi
+  while :; do
+    if [ -n "$HWP_AGENT_CMD" ]; then
+      if HWP_AGENT_MESSAGE="$msg" \
+        HWP_AGENT_SESSION_ID="$session_id" \
+        HWP_AGENT_ROUND="$round_num" \
+        /bin/sh -c "$HWP_AGENT_CMD"; then
+        return 0
+      fi
+    elif OPENCLAW_LOG_LEVEL=error "$HWP_AGENT_BIN" agent --message "$msg" --session-id "$session_id" --json; then
+      return 0
+    fi
 
-  OPENCLAW_LOG_LEVEL=error "$HWP_AGENT_BIN" agent --message "$msg" --session-id "$session_id" --json
+    if [ "$attempt" -ge "$max_retries" ]; then
+      return 1
+    fi
+
+    attempt=$((attempt + 1))
+    echo "WARN: agent provider failed, retrying attempt ${attempt}/${max_retries} after ${backoff_sec}s (session=${session_id} round=${round_num})" >&2
+    sleep "$backoff_sec"
+  done
+
 }
