@@ -257,7 +257,7 @@ bash runs/run_sequential.sh inputs/probe.txt
 config/provider.env
 ```
 
-仓库里附带了示例文件 [config/provider.env.example](/Users/mac/Documents/HWP/config/provider.env.example)。你可以按它的格式创建 `config/provider.env`，例如：
+仓库里附带了示例文件 [config/provider.env.example](/Users/mac/Documents/Halfway-Lab/protocol/HWP/config/provider.env.example)。你可以按它的格式创建 `config/provider.env`，例如：
 
 ```bash
 cp config/provider.env.example config/provider.env
@@ -324,18 +324,18 @@ cp config/provider.openclaw.env.example config/provider.env
 
 内置适配器文件：
 
-- [adapters/openai_compatible_adapter.py](/Users/mac/Documents/HWP/adapters/openai_compatible_adapter.py)
-- [adapters/ollama_adapter.py](/Users/mac/Documents/HWP/adapters/ollama_adapter.py)
+- [adapters/openai_compatible_adapter.py](/Users/mac/Documents/Halfway-Lab/protocol/HWP/adapters/openai_compatible_adapter.py)
+- [adapters/ollama_adapter.py](/Users/mac/Documents/Halfway-Lab/protocol/HWP/adapters/ollama_adapter.py)
 
 现成 provider 配置模板：
 
-- [config/provider.openrouter.env.example](/Users/mac/Documents/HWP/config/provider.openrouter.env.example)
-- [config/provider.deepseek.env.example](/Users/mac/Documents/HWP/config/provider.deepseek.env.example)
-- [config/provider.moonshot.env.example](/Users/mac/Documents/HWP/config/provider.moonshot.env.example)
-- [config/provider.siliconflow.env.example](/Users/mac/Documents/HWP/config/provider.siliconflow.env.example)
-- [config/provider.groq.env.example](/Users/mac/Documents/HWP/config/provider.groq.env.example)
-- [config/provider.ollama.env.example](/Users/mac/Documents/HWP/config/provider.ollama.env.example)
-- [config/provider.openclaw.env.example](/Users/mac/Documents/HWP/config/provider.openclaw.env.example)
+- [config/provider.openrouter.env.example](/Users/mac/Documents/Halfway-Lab/protocol/HWP/config/provider.openrouter.env.example)
+- [config/provider.deepseek.env.example](/Users/mac/Documents/Halfway-Lab/protocol/HWP/config/provider.deepseek.env.example)
+- [config/provider.moonshot.env.example](/Users/mac/Documents/Halfway-Lab/protocol/HWP/config/provider.moonshot.env.example)
+- [config/provider.siliconflow.env.example](/Users/mac/Documents/Halfway-Lab/protocol/HWP/config/provider.siliconflow.env.example)
+- [config/provider.groq.env.example](/Users/mac/Documents/Halfway-Lab/protocol/HWP/config/provider.groq.env.example)
+- [config/provider.ollama.env.example](/Users/mac/Documents/Halfway-Lab/protocol/HWP/config/provider.ollama.env.example)
+- [config/provider.openclaw.env.example](/Users/mac/Documents/Halfway-Lab/protocol/HWP/config/provider.openclaw.env.example)
 
 ```dotenv
 HWP_REPLAY_CHAIN_PATH=logs/chain_hwp_1772451330_20939.jsonl
@@ -435,7 +435,7 @@ bash runs/run_sequential.sh inputs/probe.txt
 bash runs/run_benchmarks.sh
 ```
 
-默认会读取 [benchmark_inputs.txt](/Users/mac/Documents/HWP/config/benchmark_inputs.txt)，并把结果输出到：
+默认会读取 [benchmark_inputs.txt](/Users/mac/Documents/Halfway-Lab/protocol/HWP/config/benchmark_inputs.txt)，并把结果输出到：
 
 ```text
 reports/benchmarks/<timestamp>/
@@ -738,7 +738,7 @@ Default config path:
 config/provider.env
 ```
 
-An example is included at [config/provider.env.example](/Users/mac/Documents/HWP/config/provider.env.example). Create your own config file from it:
+An example is included at [config/provider.env.example](/Users/mac/Documents/Halfway-Lab/protocol/HWP/config/provider.env.example). Create your own config file from it:
 
 ```bash
 cp config/provider.env.example config/provider.env
@@ -778,18 +778,18 @@ cp config/provider.openclaw.env.example config/provider.env
 
 Built-in adapter files:
 
-- [adapters/openai_compatible_adapter.py](/Users/mac/Documents/HWP/adapters/openai_compatible_adapter.py)
-- [adapters/ollama_adapter.py](/Users/mac/Documents/HWP/adapters/ollama_adapter.py)
+- [adapters/openai_compatible_adapter.py](/Users/mac/Documents/Halfway-Lab/protocol/HWP/adapters/openai_compatible_adapter.py)
+- [adapters/ollama_adapter.py](/Users/mac/Documents/Halfway-Lab/protocol/HWP/adapters/ollama_adapter.py)
 
 Ready-made provider config templates:
 
-- [config/provider.openrouter.env.example](/Users/mac/Documents/HWP/config/provider.openrouter.env.example)
-- [config/provider.deepseek.env.example](/Users/mac/Documents/HWP/config/provider.deepseek.env.example)
-- [config/provider.moonshot.env.example](/Users/mac/Documents/HWP/config/provider.moonshot.env.example)
-- [config/provider.siliconflow.env.example](/Users/mac/Documents/HWP/config/provider.siliconflow.env.example)
-- [config/provider.groq.env.example](/Users/mac/Documents/HWP/config/provider.groq.env.example)
-- [config/provider.ollama.env.example](/Users/mac/Documents/HWP/config/provider.ollama.env.example)
-- [config/provider.openclaw.env.example](/Users/mac/Documents/HWP/config/provider.openclaw.env.example)
+- [config/provider.openrouter.env.example](/Users/mac/Documents/Halfway-Lab/protocol/HWP/config/provider.openrouter.env.example)
+- [config/provider.deepseek.env.example](/Users/mac/Documents/Halfway-Lab/protocol/HWP/config/provider.deepseek.env.example)
+- [config/provider.moonshot.env.example](/Users/mac/Documents/Halfway-Lab/protocol/HWP/config/provider.moonshot.env.example)
+- [config/provider.siliconflow.env.example](/Users/mac/Documents/Halfway-Lab/protocol/HWP/config/provider.siliconflow.env.example)
+- [config/provider.groq.env.example](/Users/mac/Documents/Halfway-Lab/protocol/HWP/config/provider.groq.env.example)
+- [config/provider.ollama.env.example](/Users/mac/Documents/Halfway-Lab/protocol/HWP/config/provider.ollama.env.example)
+- [config/provider.openclaw.env.example](/Users/mac/Documents/Halfway-Lab/protocol/HWP/config/provider.openclaw.env.example)
 
 For the OpenAI-compatible adapter, the preferred generic variables are:
 
@@ -835,7 +835,7 @@ To run the fixed benchmark set in batch, use:
 bash runs/run_benchmarks.sh
 ```
 
-By default it reads [benchmark_inputs.txt](/Users/mac/Documents/HWP/config/benchmark_inputs.txt) and writes results under:
+By default it reads [benchmark_inputs.txt](/Users/mac/Documents/Halfway-Lab/protocol/HWP/config/benchmark_inputs.txt) and writes results under:
 
 ```text
 reports/benchmarks/<timestamp>/

@@ -3,7 +3,7 @@
 ## Basic Info
 
 - Project name: HWP
-- Current path: `/Users/mac/Documents/HWP`
+- Current path: `/Users/mac/Documents/Halfway-Lab/protocol/HWP`
 - Repo type: standalone git repo
 - Maintainer role: protocol source repo
 - Relationship to HWP: canonical source of truth
