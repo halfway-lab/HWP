@@ -233,6 +233,10 @@ Success condition:
 - there is only one true protocol source in daily practice:
   `/Users/mac/Documents/HWP`
 
+Related execution doc:
+
+- `docs/workspace/PROTOCOL_REPLICA_EXECUTION_STRATEGY.md`
+
 ## Batch 5: Protocol Workspace Placement
 
 Optional final move:

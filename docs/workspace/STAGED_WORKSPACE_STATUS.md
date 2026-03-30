@@ -152,6 +152,7 @@ Before touching Batch 3:
 Related document:
 
 - `docs/workspace/MY_APP_MIGRATION_RISK_SUMMARY.md`
+- `docs/workspace/MY_APP_HWP_DISPOSITION_OPTIONS.md`
 
 Current classification shortcut:
 

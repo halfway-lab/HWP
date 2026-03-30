@@ -306,6 +306,10 @@ This means the default planning assumption should be:
 - do not silently migrate it as ordinary app content
 - either archive it as an explicit snapshot, or remove/replace it after extracting anything the app truly still needs
 
+Related disposition options:
+
+- `docs/workspace/MY_APP_HWP_DISPOSITION_OPTIONS.md`
+
 ## Practical Conclusion
 
 `my-app` should be treated as a cleanup-and-boundary batch, not a simple relocation batch.

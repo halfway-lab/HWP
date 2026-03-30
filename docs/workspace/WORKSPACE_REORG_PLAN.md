@@ -177,6 +177,11 @@ The first actual batch should be:
 - `Half Note/hwp-protocol` is a copied replica of `HWP`.
 - Migration should be phased.
 - Backup docs must be prepared before moving projects.
+- local protocol replicas in the Half Note workspace should not be treated as long-term peer protocol sources.
+
+Related execution doc:
+
+- `docs/workspace/PROTOCOL_REPLICA_EXECUTION_STRATEGY.md`
 
 ## Post-Reorg Product Direction
 
