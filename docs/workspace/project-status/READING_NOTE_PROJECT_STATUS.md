@@ -61,20 +61,20 @@
 - Required env files or secrets:
   - confirm whether `.npmrc` contains registry-specific setup
 - External services/providers:
-  - not confirmed yet
+  - local HWP checkout is expected for HWP-backed flows
 
 ## Current Commands
 
 - Install:
   - `npm install`
 - Dev:
-  - confirm from `package.json`
+  - no dedicated `dev` script in `package.json`
 - Build:
-  - confirm from `package.json`
+  - `npm run build`
 - Test:
-  - confirm from `package.json`
+  - `npm test`
 - Verify:
-  - package-specific verification still needs to be documented
+  - `npm run build && npm test`
 
 ## Current Risks
 
@@ -84,12 +84,15 @@
 - Migration risks:
   - package paths and lockfile assumptions may break if moved carelessly
 - Path or config coupling:
-  - local node/npm layout should be checked before move
+  - `src/hwp.ts` reads `HWP_REPO_PATH`
+  - fallback repo guesses include `../HWP`, `../../HWP`, and `__dirname ../../HWP`
+  - `README.md` assumes a local HWP checkout
+  - `.npmrc` should be reviewed before publishing or moving package config
 
 ## Next Development Step
 
 - Highest-priority next task:
-  - capture exact npm commands and intended package role
+  - replace relative HWP repo guessing with a cleaner workspace-aware configuration story
 - What should happen right after migration:
   - verify install/build/test from the new `packages/` location
 

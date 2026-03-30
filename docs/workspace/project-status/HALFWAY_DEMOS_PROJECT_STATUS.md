@@ -56,9 +56,9 @@
 ## Environment and Dependencies
 
 - Runtime:
-  - likely Node-based tooling
+  - Node-based tooling and Vite demo app
 - Package manager:
-  - to confirm
+  - npm
 - Required env files or secrets:
   - adapter/provider config may be used by tools
 - External services/providers:
@@ -67,15 +67,18 @@
 ## Current Commands
 
 - Install:
-  - to confirm from repo docs
+  - `cd demos/question-expander && npm install`
 - Dev:
-  - to confirm from repo docs
+  - `cd demos/question-expander && npm run dev`
 - Build:
-  - to confirm from repo docs
+  - `cd demos/question-expander && npm run build`
 - Test:
-  - to confirm from repo docs
+  - no dedicated test script captured in the current demo package
 - Verify:
-  - to confirm from repo docs
+  - `npm run adapter`
+  - `npm run adapter:live`
+  - `npm run adapter:live:file`
+  - `npm run adapter:replay`
 
 ## Current Risks
 
@@ -84,12 +87,14 @@
 - Migration risks:
   - demo tools may reference absolute or sibling paths under `/Users/mac/Documents`
 - Path or config coupling:
-  - likely coupled to current HWP repo path in some helper scripts
+  - `tools/question-expander-adapter.mjs` defaults `HWP_REPO_PATH` to `/Users/mac/Documents/HWP`
+  - `demos/question-expander/package.json` hardcodes `/Users/mac/Documents/HWP` in `adapter:live` and `adapter:replay`
+  - `demos/question-expander/tools/llm-agent-bridge.mjs` also defaults to `/Users/mac/Documents/HWP`
 
 ## Next Development Step
 
 - Highest-priority next task:
-  - capture actual demo startup commands and path assumptions
+  - parameterize HWP repo discovery so demo scripts survive a workspace move
 - What should happen right after migration:
   - test tool-to-protocol path references
 

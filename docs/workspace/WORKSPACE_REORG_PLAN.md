@@ -177,3 +177,33 @@ The first actual batch should be:
 - `Half Note/hwp-protocol` is a copied replica of `HWP`.
 - Migration should be phased.
 - Backup docs must be prepared before moving projects.
+
+## Post-Reorg Product Direction
+
+After the workspace structure is stabilized, the next development step should follow a clearer module split instead of mixing note logic, inference logic, and UI logic in one place.
+
+Recommended responsibility split:
+
+- `reading-note package`
+  - note model
+  - double-link parsing
+  - backlinks
+  - graph node/edge generation
+  - relation scoring
+- `HWP package`
+  - cognitive generation
+  - relation discovery
+  - implicit connection inference
+  - topic drift analysis
+  - path analysis
+- `Half Note`
+  - UI lists and note views
+  - double-link panel
+  - graph visualization
+  - node-click navigation
+
+Architectural rule:
+
+- `reading-note` owns explicit note structure
+- `HWP` owns inferred or exploratory structure
+- `Half Note` consumes those outputs and renders the user experience

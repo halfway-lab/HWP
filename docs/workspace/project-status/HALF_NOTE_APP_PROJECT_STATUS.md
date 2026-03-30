@@ -62,23 +62,28 @@
 - Package manager:
   - npm for `my-app`
 - Required env files or secrets:
-  - to confirm in app repo
+  - no `.env*` file was found at the top two levels during the migration audit
 - External services/providers:
-  - app may depend on HWP-backed AI routes/providers
+  - app uses `@halfway-lab/reading-note`
+  - app may depend on HWP-backed AI routes/providers through that package
 
 ## Current Risks
 
 - Known issues:
   - copied protocol repo may drift from the canonical HWP repo
+  - `my-app` has no git remote configured today
 - Migration risks:
   - nested repos plus local DB files increase move complexity
 - Path or config coupling:
-  - app may refer to embedded local HWP paths
+  - `my-app` depends on `@halfway-lab/reading-note`
+  - local DB files live under `data/halfnote.db*`
+  - repo contains an embedded `HWP/` tree that carries many canonical-HWP path references
+  - direct app code did not show hardcoded `/Users/mac/Documents/HWP`, but the embedded `HWP/` copy will confuse future moves if left undocumented
 
 ## Next Development Step
 
 - Highest-priority next task:
-  - split documentation between `my-app` and the copied `hwp-protocol`
+  - decide whether the embedded `my-app/HWP` tree is a disposable copy, fixture, or dependency that should be removed before migration
 - What should happen right after migration:
   - verify app startup and protocol integration paths
 
