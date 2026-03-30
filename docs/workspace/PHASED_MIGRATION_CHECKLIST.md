@@ -169,8 +169,22 @@ Pre-move checklist:
 Post-move checklist:
 
 - [ ] demo startup commands still work
-- [ ] tool scripts still locate protocol resources correctly
-- [ ] asset paths remain valid
+- [x] tool scripts still locate protocol resources correctly
+- [x] asset paths remain valid
+
+Current staged migration status:
+
+- a staged git clone now exists at `/Users/mac/Documents/Halfway-Lab/demos/halfway-demos`
+- original repo at `/Users/mac/Documents/halfway-demos` is still being kept as fallback
+- staged copy validation succeeded with:
+  - `cd demos/question-expander && npm install --prefer-offline --no-audit --no-fund`
+  - `cd demos/question-expander && npm run build`
+- staged copy path hardening already applied:
+  - `tools/question-expander-adapter.mjs` now prefers `HWP_REPO_PATH`, then `Halfway-Lab/protocol/HWP`, then the legacy HWP path
+  - `demos/question-expander/tools/llm-agent-bridge.mjs` now follows the same repo-path resolution pattern
+  - `adapter:live` no longer hardcodes `/Users/mac/Documents/HWP`
+- remaining cleanup:
+  - `adapter:replay` still carries a legacy fallback chain-log path and should be revisited after protocol/log placement is finalized
 
 ## Batch 3: App Move
 

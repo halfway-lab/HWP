@@ -101,3 +101,12 @@
 ## Notes
 
 - This is a good early migration candidate once docs and runbook are captured.
+- A staged git clone now exists at:
+  - `/Users/mac/Documents/Halfway-Lab/demos/halfway-demos`
+- Validation in the new location succeeded with:
+  - `cd demos/question-expander && npm install --prefer-offline --no-audit --no-fund`
+  - `cd demos/question-expander && npm run build`
+- Staged path hardening is already in place for:
+  - `tools/question-expander-adapter.mjs`
+  - `demos/question-expander/tools/llm-agent-bridge.mjs`
+- `adapter:replay` still carries a legacy fallback chain-log path and should be cleaned up later, after protocol/log placement is finalized.
