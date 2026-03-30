@@ -309,6 +309,7 @@ This means the default planning assumption should be:
 Related disposition options:
 
 - `docs/workspace/MY_APP_HWP_DISPOSITION_OPTIONS.md`
+- `docs/workspace/MY_APP_HWP_REMOVAL_PLAN.md`
 
 ## Practical Conclusion
 

@@ -145,6 +145,7 @@ Recommendation:
 Related draft:
 
 - `docs/workspace/MY_APP_PROTOCOL_REFERENCE_NOTE_DRAFT.md`
+- `docs/workspace/MY_APP_HWP_REMOVAL_PLAN.md`
 
 ## Recommended Path
 
