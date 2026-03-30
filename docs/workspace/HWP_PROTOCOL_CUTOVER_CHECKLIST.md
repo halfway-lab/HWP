@@ -40,10 +40,11 @@ Already true:
 - the embedded app-side `my-app/HWP` replica has been removed from the active app tree
 - workspace entry docs now exist in `Halfway-Lab`
 - daily-use cutover for app/package/demo can now be declared separately from protocol cutover
+- a staged protocol clone now exists at `Halfway-Lab/protocol/HWP`
+- the staged protocol clone has passed `bash runs/verify_v06_all.sh`
 
 Not yet true:
 
-- `Halfway-Lab/protocol/` does not exist yet
 - canonical HWP is still the live protocol source at `/Users/mac/Documents/HWP`
 - `/Users/mac/Documents/Half Note/hwp-protocol` still exists as a temporary local protocol replica
 - final cutover policy has not yet been declared
@@ -140,9 +141,9 @@ Use this as the direct go/no-go list:
 - [ ] staged app/package/demo paths are the practical daily starting points
 - [ ] `Half Note/hwp-protocol` is no longer being treated as a working peer source
 - [ ] remaining HWP path-sensitive scripts are identified
-- [ ] replay baseline is green
+- [x] replay/log-based verifier baseline is green in the staged protocol clone
 - [ ] live subset baseline is green
-- [ ] `Halfway-Lab/protocol/` target path plan is prepared
+- [x] `Halfway-Lab/protocol/` target path plan is prepared
 - [ ] immediate post-move documentation edits are listed
 - [ ] fallback policy for old `/Users/mac/Documents/HWP` is decided
 

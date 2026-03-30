@@ -12,6 +12,8 @@ Current staged layout:
 /Users/mac/Documents/Halfway-Lab
   /apps
     /half-note
+  /protocol
+    /HWP
   /packages
     /reading-note
   /demos
@@ -20,8 +22,6 @@ Current staged layout:
 
 Not yet staged:
 
-- canonical protocol repo:
-  - `/Users/mac/Documents/HWP`
 - protocol copy cleanup:
   - `/Users/mac/Documents/Half Note/hwp-protocol`
 
@@ -134,6 +134,29 @@ Embedded protocol cleanup status:
 - archived snapshot commit:
   - `34d29e1`
 
+### Canonical Protocol Staging
+
+- staged location:
+  - `/Users/mac/Documents/Halfway-Lab/protocol/HWP`
+- migration mode:
+  - local git clone while keeping the current canonical repo in place
+- current active canonical repo still preserved at:
+  - `/Users/mac/Documents/HWP`
+
+Validation completed in the staged location:
+
+- local `logs/` copied into the staged clone for verification input
+- `bash runs/verify_v06_all.sh`
+
+Validation result:
+
+- unified v0.6 verification suite passed
+- fixture regression checks passed
+
+Current staged protocol commit head:
+
+- `44ee0cf`
+
 ## Why Batch 3 Is Different
 
 `my-app` is not in the same state as `reading-note` or `halfway-demos`.
@@ -180,7 +203,7 @@ Current reality:
 
 - `reading-note` has a validated staged home
 - `halfway-demos` has a validated staged home
-- the canonical protocol repo is still at its original path
+- the canonical protocol repo now also has a validated staged clone under `Halfway-Lab/protocol/HWP`
 - the app workspace is the next real complexity boundary
 
 ## Next Recommended Step
