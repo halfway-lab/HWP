@@ -147,11 +147,23 @@ Validation completed in the staged location:
 
 - local `logs/` copied into the staged clone for verification input
 - `bash runs/verify_v06_all.sh`
+- `HWP_ROUND_SLEEP_SEC=0 bash runs/run_benchmarks.sh config/benchmark_inputs.live_subset.txt`
 
 Validation result:
 
 - unified v0.6 verification suite passed
 - fixture regression checks passed
+- live subset baseline passed for:
+  - `probe`
+  - `natural`
+  - `mixed`
+- live subset verifier status:
+  - structured: pass
+  - blind_spot: pass
+  - continuity: pass
+  - semantic_groups: pass
+- live subset report:
+  - `/Users/mac/Documents/Halfway-Lab/protocol/HWP/reports/benchmarks/20260330T162325/summary.md`
 
 Current staged protocol commit head:
 

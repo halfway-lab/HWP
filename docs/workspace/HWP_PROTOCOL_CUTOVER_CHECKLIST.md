@@ -42,6 +42,7 @@ Already true:
 - daily-use cutover for app/package/demo can now be declared separately from protocol cutover
 - a staged protocol clone now exists at `Halfway-Lab/protocol/HWP`
 - the staged protocol clone has passed `bash runs/verify_v06_all.sh`
+- the staged protocol clone has passed a live subset baseline for `probe`, `natural`, and `mixed`
 
 Not yet true:
 
@@ -142,7 +143,7 @@ Use this as the direct go/no-go list:
 - [ ] `Half Note/hwp-protocol` is no longer being treated as a working peer source
 - [ ] remaining HWP path-sensitive scripts are identified
 - [x] replay/log-based verifier baseline is green in the staged protocol clone
-- [ ] live subset baseline is green
+- [x] live subset baseline is green in the staged protocol clone
 - [x] `Halfway-Lab/protocol/` target path plan is prepared
 - [ ] immediate post-move documentation edits are listed
 - [ ] fallback policy for old `/Users/mac/Documents/HWP` is decided
