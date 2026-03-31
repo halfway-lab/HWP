@@ -504,6 +504,14 @@ python3 runs/report_timing.py logs/run.log reports/timing_summary.md 10
 HWP_REPLAY_CHAIN_PATH=logs/chain_hwp_1772451330_20939.jsonl HWP_ROUND_SLEEP_SEC=0 bash runs/run_benchmarks.sh
 ```
 
+如果你想横向比较多个 provider，可以运行：
+
+```bash
+bash runs/run_benchmarks_multi_provider.sh config/providers.list config/benchmark_inputs.live_subset.txt
+```
+
+multi-provider 报告现在会优先读取每个 provider 的 `overview.tsv`，因此不仅能比较 run/verifier 结果，也能汇总链级 timing。
+
 如果你想直接使用统一 Python CLI，也可以：
   ```bash
   python3 -m hwp_protocol.cli fixture-verify blind_spot valid

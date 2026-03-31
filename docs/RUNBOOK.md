@@ -46,6 +46,14 @@ HWP_REPLAY_CHAIN_PATH=logs/chain_hwp_1772451330_20939.jsonl HWP_ROUND_SLEEP_SEC=
 HWP_ROUND_SLEEP_SEC=0 bash runs/run_benchmarks.sh
 ```
 
+## Run Multi-Provider Benchmarks
+
+```bash
+bash runs/run_benchmarks_multi_provider.sh config/providers.list config/benchmark_inputs.live_subset.txt
+```
+
+输出目录会包含 `comparison.md` 与 `failures.md`，并优先基于各 provider 的 `overview.tsv` 生成横向对比。
+
 ## Read Benchmark Overview
 
 每次 benchmark 运行后，可直接查看：

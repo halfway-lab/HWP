@@ -43,6 +43,27 @@ fi
 # 存储所有 provider 的结果
 declare -A PROVIDER_REPORTS
 
+run_provider_benchmark() {
+    local env_path="$1"
+    local benchmark_file="$2"
+    local provider_log="$3"
+
+    env \
+        HWP_PROVIDER_CONFIG="$env_path" \
+        HWP_PROVIDER_TYPE="" \
+        HWP_PROVIDER_NAME="" \
+        HWP_AGENT_BIN="" \
+        HWP_AGENT_CMD="" \
+        HWP_LLM_API_KEY="" \
+        HWP_LLM_MODEL="" \
+        HWP_LLM_BASE_URL="" \
+        OPENAI_API_KEY="" \
+        OPENAI_MODEL="" \
+        OPENAI_BASE_URL="" \
+        OLLAMA_MODEL="" \
+        bash "$ROOT_DIR/runs/run_benchmarks.sh" "$benchmark_file" > "$provider_log" 2>&1
+}
+
 # 遍历每个 provider
 while IFS='|' read -r provider_name env_file description || [ -n "$provider_name" ]; do
     # 跳过注释和空行
@@ -61,17 +82,13 @@ while IFS='|' read -r provider_name env_file description || [ -n "$provider_name
         continue
     fi
     
-    # 临时设置 provider
-    export HWP_PROVIDER_TYPE="$provider_name"
-    export HWP_PROVIDER_NAME="$provider_name"
-    
     # 运行 benchmark
     provider_report_dir="$MULTI_REPORT_DIR/$provider_name"
     mkdir -p "$provider_report_dir"
     
     echo "Running benchmark for $provider_name..."
     
-    if bash "$ROOT_DIR/runs/run_benchmarks.sh" "$BENCHMARK_FILE" > "$provider_report_dir/benchmark.log" 2>&1; then
+    if run_provider_benchmark "$env_path" "$BENCHMARK_FILE" "$provider_report_dir/benchmark.log"; then
         echo "✓ $provider_name completed"
         
         # 找到最新的报告目录
@@ -80,6 +97,9 @@ while IFS='|' read -r provider_name env_file description || [ -n "$provider_name
             # 创建符号链接或复制关键文件
             cp "$latest_report/results.tsv" "$provider_report_dir/" 2>/dev/null || true
             cp "$latest_report/summary.md" "$provider_report_dir/" 2>/dev/null || true
+            cp "$latest_report/overview.md" "$provider_report_dir/" 2>/dev/null || true
+            cp "$latest_report/overview.tsv" "$provider_report_dir/" 2>/dev/null || true
+            cp "$latest_report/context.txt" "$provider_report_dir/" 2>/dev/null || true
             PROVIDER_REPORTS["$provider_name"]="$provider_report_dir"
         fi
     else

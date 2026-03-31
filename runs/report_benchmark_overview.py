@@ -176,10 +176,32 @@ def render_markdown(
     return "\n".join(lines)
 
 
+def write_overview_tsv(overview_rows: list[dict[str, str]], output_path: Path) -> None:
+    fieldnames = [
+        "benchmark",
+        "run_status",
+        "verifier_status",
+        "duration_sec",
+        "log_count",
+        "timing_chains",
+        "timing_rounds",
+        "round_avg_sec",
+        "round_max_sec",
+        "chain_avg_sec",
+        "chain_max_sec",
+        "failure_reason",
+        "report_dir",
+    ]
+    with output_path.open("w", newline="", encoding="utf-8") as handle:
+        writer = csv.DictWriter(handle, fieldnames=fieldnames, delimiter="\t")
+        writer.writeheader()
+        writer.writerows(overview_rows)
+
+
 def main() -> int:
-    if len(sys.argv) != 5:
+    if len(sys.argv) not in (5, 6):
         print(
-            "Usage: python3 runs/report_benchmark_overview.py <results.tsv> <context.txt> <run.log> <overview.md>",
+            "Usage: python3 runs/report_benchmark_overview.py <results.tsv> <context.txt> <run.log> <overview.md> [overview.tsv]",
             file=sys.stderr,
         )
         return 1
@@ -194,6 +216,8 @@ def main() -> int:
     timing_index = build_timing_index(run_log_path)
     overview_rows = build_overview_rows(rows, timing_index)
     overview_path.write_text(render_markdown(rows, context, overview_rows), encoding="utf-8")
+    if len(sys.argv) == 6:
+        write_overview_tsv(overview_rows, Path(sys.argv[5]))
     print(overview_path)
     return 0
 

@@ -10,6 +10,7 @@ REPORT_DIR="$REPORT_ROOT/$TIMESTAMP"
 RESULTS_TSV="$REPORT_DIR/results.tsv"
 SUMMARY_MD="$REPORT_DIR/summary.md"
 OVERVIEW_MD="$REPORT_DIR/overview.md"
+OVERVIEW_TSV="$REPORT_DIR/overview.tsv"
 RUN_LOG="$REPORT_DIR/run.log"
 PROVIDER_TYPE="${HWP_PROVIDER_TYPE:-}"
 PROVIDER_NAME="${HWP_PROVIDER_NAME:-}"
@@ -180,7 +181,8 @@ python3 "$ROOT_DIR/runs/report_benchmark_overview.py" \
   "$RESULTS_TSV" \
   "$REPORT_DIR/context.txt" \
   "$ROOT_DIR/logs/run.log" \
-  "$OVERVIEW_MD" > "$REPORT_DIR/overview_path.txt"
+  "$OVERVIEW_MD" \
+  "$OVERVIEW_TSV" > "$REPORT_DIR/overview_path.txt"
 
 # 生成回归报告（第5步新增）
 echo ""

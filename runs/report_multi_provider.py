@@ -1,190 +1,231 @@
 #!/usr/bin/env python3
-"""
-HWP 多 Provider 对比报告生成器 - 第3步
-
-用途：读取多个 provider 的 benchmark 结果，生成对比报告
-"""
+from __future__ import annotations
 
 import csv
 import sys
 from pathlib import Path
-from collections import defaultdict
+from typing import Any
 
 
-def load_provider_results(multi_report_dir: Path) -> dict[str, list[dict]]:
-    """加载每个 provider 的 results.tsv"""
-    provider_data = {}
-    
+def load_tsv(path: Path) -> list[dict[str, str]]:
+    if not path.exists():
+        return []
+    with path.open(newline="", encoding="utf-8") as handle:
+        return list(csv.DictReader(handle, delimiter="\t"))
+
+
+def load_context(path: Path) -> dict[str, str]:
+    context: dict[str, str] = {}
+    if not path.exists():
+        return context
+    for raw_line in path.read_text(encoding="utf-8").splitlines():
+        if "=" not in raw_line:
+            continue
+        key, value = raw_line.split("=", 1)
+        context[key.strip()] = value.strip()
+    return context
+
+
+def load_provider_results(multi_report_dir: Path) -> dict[str, dict[str, Any]]:
+    provider_data: dict[str, dict[str, Any]] = {}
+
     for provider_dir in multi_report_dir.iterdir():
         if not provider_dir.is_dir():
             continue
-        
+
         provider_name = provider_dir.name
-        results_file = provider_dir / "results.tsv"
-        
-        if not results_file.exists():
+        overview_rows = load_tsv(provider_dir / "overview.tsv")
+        results_rows = load_tsv(provider_dir / "results.tsv")
+        if not overview_rows and not results_rows:
             continue
-        
-        with results_file.open(newline="", encoding="utf-8") as f:
-            reader = csv.DictReader(f, delimiter="\t")
-            provider_data[provider_name] = list(reader)
-    
+
+        provider_data[provider_name] = {
+            "provider": provider_name,
+            "rows": overview_rows or results_rows,
+            "context": load_context(provider_dir / "context.txt"),
+            "has_overview": bool(overview_rows),
+        }
+
     return provider_data
 
 
-def calculate_provider_score(rows: list[dict]) -> dict:
-    """计算 provider 的综合得分"""
+def calculate_provider_score(rows: list[dict[str, str]]) -> dict[str, Any]:
     if not rows:
         return {"score": 0, "total": 0}
-    
+
     total = len(rows)
     passed = sum(1 for r in rows if r.get("run_status") == "pass")
-    structured_pass = sum(1 for r in rows if r.get("structured") == "pass")
-    blind_pass = sum(1 for r in rows if r.get("blind_spot") == "pass")
-    continuity_pass = sum(1 for r in rows if r.get("continuity") == "pass")
-    semantic_pass = sum(1 for r in rows if r.get("semantic_groups") == "pass")
-    
-    # 综合得分：运行成功 + 各项验证通过
-    score = (
-        passed * 2 +  # 运行成功权重最高
-        structured_pass +
-        blind_pass +
-        continuity_pass +
-        semantic_pass
+    verifier_pass = sum(
+        1
+        for r in rows
+        if r.get("verifier_status") == "pass"
+        or (
+            r.get("structured") == "pass"
+            and r.get("blind_spot") == "pass"
+            and r.get("continuity") == "pass"
+            and r.get("semantic_groups") == "pass"
+        )
     )
-    max_score = total * 6  # 每项最高6分
-    
+    timing_rows = [r for r in rows if r.get("chain_avg_sec")]
+    avg_chain_sec = (
+        sum(float(r.get("chain_avg_sec", "0") or 0) for r in timing_rows) / len(timing_rows) if timing_rows else 0.0
+    )
+    max_chain_sec = max((float(r.get("chain_max_sec", "0") or 0) for r in timing_rows), default=0.0)
+
+    score = (
+        passed * 2 +
+        verifier_pass * 3
+    )
+    max_score = total * 5
+
     return {
         "score": score,
         "max_score": max_score,
         "percentage": (score / max_score * 100) if max_score > 0 else 0,
         "run_pass": passed,
-        "structured_pass": structured_pass,
-        "blind_pass": blind_pass,
-        "continuity_pass": continuity_pass,
-        "semantic_pass": semantic_pass,
+        "verifier_pass": verifier_pass,
+        "timing_coverage": len(timing_rows),
+        "avg_chain_sec": avg_chain_sec,
+        "max_chain_sec": max_chain_sec,
         "total": total,
     }
 
 
-def generate_comparison_table(provider_data: dict[str, list[dict]]) -> list[str]:
-    """生成 provider 对比表格"""
+def generate_comparison_table(provider_data: dict[str, dict[str, Any]]) -> list[str]:
     lines = [
-        "## Provider 综合对比",
+        "## Provider Overview",
         "",
-        "| Provider | Score | Run | Structured | Blind Spot | Continuity | Semantic |",
-        "|----------|-------|-----|------------|------------|------------|----------|",
+        "| Provider | Source | Score | Run | Full Pass | Timing | Avg Chain Sec | Max Chain Sec |",
+        "|----------|--------|-------|-----|-----------|--------|---------------|---------------|",
     ]
-    
-    # 按得分排序
+
     scores = []
-    for provider, rows in provider_data.items():
-        score_data = calculate_provider_score(rows)
-        scores.append((provider, score_data))
-    
-    scores.sort(key=lambda x: x[1]["percentage"], reverse=True)
-    
-    for provider, score_data in scores:
+    for provider, payload in provider_data.items():
+        score_data = calculate_provider_score(payload["rows"])
+        scores.append((provider, payload, score_data))
+
+    scores.sort(key=lambda x: x[2]["percentage"], reverse=True)
+
+    for provider, payload, score_data in scores:
+        source = "overview.tsv" if payload.get("has_overview") else "results.tsv"
         lines.append(
             f"| {provider} | "
+            f"{source} | "
             f"{score_data['percentage']:.1f}% | "
             f"{score_data['run_pass']}/{score_data['total']} | "
-            f"{score_data['structured_pass']}/{score_data['total']} | "
-            f"{score_data['blind_pass']}/{score_data['total']} | "
-            f"{score_data['continuity_pass']}/{score_data['total']} | "
-            f"{score_data['semantic_pass']}/{score_data['total']} |"
+            f"{score_data['verifier_pass']}/{score_data['total']} | "
+            f"{score_data['timing_coverage']}/{score_data['total']} | "
+            f"{score_data['avg_chain_sec']:.2f} | "
+            f"{score_data['max_chain_sec']:.2f} |"
         )
-    
+
     return lines
 
 
-def generate_benchmark_breakdown(provider_data: dict[str, list[dict]]) -> list[str]:
-    """生成每个 benchmark 的跨 provider 对比"""
+def generate_benchmark_breakdown(provider_data: dict[str, dict[str, Any]]) -> list[str]:
     lines = [
         "",
-        "## Benchmark 详细对比",
+        "## Benchmark Breakdown",
         "",
     ]
-    
-    # 收集所有 benchmark
+
     all_benchmarks = set()
-    for rows in provider_data.values():
-        for row in rows:
+    for payload in provider_data.values():
+        for row in payload["rows"]:
             all_benchmarks.add(row.get("benchmark", "unknown"))
-    
+
     for benchmark in sorted(all_benchmarks):
         lines.extend([
             f"### {benchmark}",
             "",
-            "| Provider | Run | Structured | Blind Spot | Continuity | Semantic |",
-            "|----------|-----|------------|------------|------------|----------|",
+            "| Provider | Run | Verifier | Duration Sec | Avg Chain Sec | Max Chain Sec | Failure |",
+            "|----------|-----|----------|--------------|---------------|---------------|---------|",
         ])
-        
-        for provider, rows in provider_data.items():
-            # 找到对应 benchmark 的行
+
+        for provider, payload in provider_data.items():
             bench_row = None
-            for row in rows:
+            for row in payload["rows"]:
                 if row.get("benchmark") == benchmark:
                     bench_row = row
                     break
-            
+
             if bench_row:
+                verifier = bench_row.get("verifier_status")
+                if not verifier:
+                    verifier = (
+                        "pass"
+                        if bench_row.get("structured") == "pass"
+                        and bench_row.get("blind_spot") == "pass"
+                        and bench_row.get("continuity") == "pass"
+                        and bench_row.get("semantic_groups") == "pass"
+                        else "fail"
+                    )
                 lines.append(
                     f"| {provider} | "
                     f"{bench_row.get('run_status', 'N/A')} | "
-                    f"{bench_row.get('structured', 'N/A')} | "
-                    f"{bench_row.get('blind_spot', 'N/A')} | "
-                    f"{bench_row.get('continuity', 'N/A')} | "
-                    f"{bench_row.get('semantic_groups', 'N/A')} |"
+                    f"{verifier} | "
+                    f"{bench_row.get('duration_sec', '')} | "
+                    f"{bench_row.get('chain_avg_sec', '')} | "
+                    f"{bench_row.get('chain_max_sec', '')} | "
+                    f"{bench_row.get('failure_reason', '')} |"
                 )
             else:
-                lines.append(f"| {provider} | N/A | N/A | N/A | N/A | N/A |")
-        
+                lines.append(f"| {provider} | N/A | N/A |  |  |  |  |")
+
         lines.append("")
-    
+
     return lines
 
 
-def generate_recommendations(provider_data: dict[str, list[dict]]) -> list[str]:
-    """生成推荐建议"""
+def generate_recommendations(provider_data: dict[str, dict[str, Any]]) -> list[str]:
     lines = [
         "",
-        "## 推荐建议",
+        "## Recommendations",
         "",
     ]
-    
-    # 计算每个 provider 的稳定性
-    stability = {}
-    for provider, rows in provider_data.items():
+
+    stability: dict[str, tuple[float, float]] = {}
+    for provider, payload in provider_data.items():
+        rows = payload["rows"]
         if not rows:
             continue
-        
+
         total = len(rows)
-        all_pass = sum(1 for r in rows 
-                      if r.get("run_status") == "pass" 
-                      and r.get("structured") == "pass"
-                      and r.get("blind_spot") == "pass"
-                      and r.get("continuity") == "pass"
-                      and r.get("semantic_groups") == "pass")
-        stability[provider] = all_pass / total if total > 0 else 0
-    
+        all_pass = sum(
+            1
+            for r in rows
+            if r.get("run_status") == "pass"
+            and (
+                r.get("verifier_status") == "pass"
+                or (
+                    r.get("structured") == "pass"
+                    and r.get("blind_spot") == "pass"
+                    and r.get("continuity") == "pass"
+                    and r.get("semantic_groups") == "pass"
+                )
+            )
+        )
+        avg_chain = sum(float(r.get("chain_avg_sec", "0") or 0) for r in rows if r.get("chain_avg_sec"))
+        avg_chain = avg_chain / max(sum(1 for r in rows if r.get("chain_avg_sec")), 1)
+        stability[provider] = (all_pass / total if total > 0 else 0, avg_chain)
+
     if stability:
-        best_provider = max(stability, key=stability.get)
+        best_provider = max(stability, key=lambda key: (stability[key][0], -stability[key][1] if stability[key][1] else 0))
         lines.extend([
-            f"- **最稳定 Provider**: {best_provider} (全通过率: {stability[best_provider]:.1%})",
+            f"- Best default provider: **{best_provider}** (full-pass rate: {stability[best_provider][0]:.1%})",
             "",
-            "### 各 Provider 特点",
+            "### Provider Notes",
             "",
         ])
-        
-        for provider, rate in sorted(stability.items(), key=lambda x: x[1], reverse=True):
+
+        for provider, (rate, avg_chain) in sorted(stability.items(), key=lambda x: (x[1][0], -x[1][1] if x[1][1] else 0), reverse=True):
             if rate >= 0.8:
-                lines.append(f"- **{provider}**: 高稳定性 ({rate:.1%})，推荐用于生产环境")
+                lines.append(f"- **{provider}**: high stability ({rate:.1%}) with avg chain {avg_chain:.2f}s.")
             elif rate >= 0.5:
-                lines.append(f"- **{provider}**: 中等稳定性 ({rate:.1%})，需要进一步调优")
+                lines.append(f"- **{provider}**: medium stability ({rate:.1%}); keep it under observation.")
             else:
-                lines.append(f"- **{provider}**: 较低稳定性 ({rate:.1%})，建议检查配置或模型适配")
-    
+                lines.append(f"- **{provider}**: low stability ({rate:.1%}); check config, model fit, or verifier regressions.")
+
     return lines
 
 
@@ -210,7 +251,7 @@ def main() -> int:
     
     # 生成报告
     lines = [
-        "# HWP Multi-Provider Benchmark Comparison",
+        "# HWP Multi-Provider Benchmark Overview",
         "",
         f"**Total Providers**: {len(provider_data)}",
         "",
