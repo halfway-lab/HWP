@@ -1,5 +1,12 @@
 # Reading Note Package Status
 
+Historical snapshot note:
+
+- this file records the old package-path snapshot from the migration period
+- it should not be treated as the current source for active package status
+- for the current maintained package status, prefer `/Users/mac/Documents/Halfway-Lab/packages/reading-note/docs/PROJECT_STATUS.md`
+- for workspace-wide context, prefer `/Users/mac/Documents/Halfway-Lab/WORKSPACE_STATUS.md`
+
 ## Basic Info
 
 - Project name: reading-note
@@ -106,3 +113,4 @@
   - `npm run build`
   - `npm test`
 - Original path is still being kept temporarily as fallback until downstream references are updated.
+- The active package home is now `/Users/mac/Documents/Halfway-Lab/packages/reading-note`.

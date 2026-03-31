@@ -1,5 +1,11 @@
 # HWP Project Status
 
+Historical snapshot note:
+
+- this file is kept as a workspace-migration snapshot
+- for the current maintained protocol status, prefer `/Users/mac/Documents/Halfway-Lab/protocol/HWP/docs/PROJECT_STATUS.md`
+- for workspace-wide context, prefer `/Users/mac/Documents/Halfway-Lab/WORKSPACE_STATUS.md`
+
 ## Basic Info
 
 - Project name: HWP
@@ -37,8 +43,11 @@
 ## Entry Points
 
 - Main README: `README.md`
-- Main app/server entry: `hwp_server.py`
+- Main app/server entry: `runs/run_sequential.sh`
 - Main package entry: `hwp_protocol/cli.py`
+- Legacy compatibility entry:
+  - `hwp_server.py`
+  - `hwp_cli.sh`
 - Main test entry:
   - `tests/test_protocol_core.py`
   - `runs/verify_v06_all.sh`
@@ -112,3 +121,4 @@
 - Treat this repo as the only canonical protocol source of truth.
 - Old `/Users/mac/Documents/HWP` is now a fallback canonical copy during observation.
 - Downstream copies should not become long-term parallel protocol sources.
+- If this file diverges from `protocol/HWP/docs/PROJECT_STATUS.md`, treat the protocol-local document as authoritative.

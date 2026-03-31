@@ -1,5 +1,12 @@
 # Half Note App Workspace Status
 
+Historical snapshot note:
+
+- this file records the old `Half Note` workspace shape before cutover
+- it should not be treated as the current source for active app status
+- for the current maintained app status, prefer `/Users/mac/Documents/Halfway-Lab/apps/half-note/docs/PROJECT_STATUS.md`
+- for workspace-wide context, prefer `/Users/mac/Documents/Halfway-Lab/WORKSPACE_STATUS.md`
+
 ## Basic Info
 
 - Project name: Half Note workspace
@@ -90,3 +97,4 @@
 ## Notes
 
 - Treat `hwp-protocol` here as a replica, not a second protocol source.
+- The active app home is now `/Users/mac/Documents/Halfway-Lab/apps/half-note`.

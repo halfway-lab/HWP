@@ -1,10 +1,16 @@
 # Halfway Demos Project Status
 
+Historical snapshot note:
+
+- this file is kept as a migration-era summary under the protocol workspace docs
+- for the current maintained demo status, prefer `/Users/mac/Documents/Halfway-Lab/demos/halfway-demos/docs/PROJECT_STATUS.md`
+- for workspace-wide context, prefer `/Users/mac/Documents/Halfway-Lab/WORKSPACE_STATUS.md`
+
 ## Basic Info
 
 - Project name: halfway-demos
-- Current path: `/Users/mac/Documents/halfway-demos`
-- Repo type: standalone git repo
+- Current path: `/Users/mac/Documents/Halfway-Lab/demos/halfway-demos`
+- Repo type: standalone git repo inside the Halfway-Lab workspace
 - Maintainer role: demo/tooling repo
 - Relationship to HWP:
   - demo-facing usage of HWP tools and adapters
@@ -29,17 +35,18 @@
 - Out-of-scope items:
   - protocol source ownership
 - Current maturity:
-  - active / demo support repo
+  - active demo support repo in the Halfway-Lab workspace
 
 ## Entry Points
 
 - Main README: `README.md`
 - Main app/server entry:
-  - demo-specific, to be confirmed from tools/scripts
+  - `demos/question-expander` for the primary documented demo flow
+  - repo-level adapter helper at `tools/question-expander-adapter.mjs`
 - Main package entry:
   - not primary
 - Main test entry:
-  - not yet formalized in current quick scan
+  - `cd demos/question-expander && npm run test:run`
 
 ## Directory Notes
 
@@ -73,36 +80,37 @@
 - Build:
   - `cd demos/question-expander && npm run build`
 - Test:
-  - no dedicated test script captured in the current demo package
+  - `cd demos/question-expander && npm run test:run`
 - Verify:
-  - `npm run adapter`
-  - `npm run adapter:live`
-  - `npm run adapter:live:file`
-  - `npm run adapter:replay`
+  - `cd demos/question-expander && npm run build`
+  - `cd demos/question-expander && npm run test:run`
+  - `cd demos/question-expander && npm run adapter`
+  - `cd demos/question-expander && npm run adapter:live`
+  - `cd demos/question-expander && npm run adapter:live:file`
+  - `cd demos/question-expander && npm run adapter:replay`
 
 ## Current Risks
 
 - Known issues:
-  - current runbook not yet centralized
+  - current runbook is still split between repo-level and demo-level docs
 - Migration risks:
-  - demo tools may reference absolute or sibling paths under `/Users/mac/Documents`
+  - some historical docs still preserve pre-cutover paths
 - Path or config coupling:
-  - `tools/question-expander-adapter.mjs` defaults `HWP_REPO_PATH` to `/Users/mac/Documents/HWP`
-  - `demos/question-expander/package.json` hardcodes `/Users/mac/Documents/HWP` in `adapter:live` and `adapter:replay`
-  - `demos/question-expander/tools/llm-agent-bridge.mjs` also defaults to `/Users/mac/Documents/HWP`
+  - active defaults now point to `/Users/mac/Documents/Halfway-Lab/protocol/HWP`
+  - `adapter:replay` still depends on a specific local chain-log path
+  - some adapter helpers preserve fallback behavior for older local paths during observation
 
 ## Next Development Step
 
 - Highest-priority next task:
-  - parameterize HWP repo discovery so demo scripts survive a workspace move
+  - keep reducing legacy fallback assumptions while preserving a safe rollback path during observation
 - What should happen right after migration:
-  - test tool-to-protocol path references
+  - continue testing tool-to-protocol path references from the new workspace
 
 ## Notes
 
-- This is a good early migration candidate once docs and runbook are captured.
-- A staged git clone now exists at:
-  - `/Users/mac/Documents/Halfway-Lab/demos/halfway-demos`
+- Old `/Users/mac/Documents/halfway-demos` should now be treated as a fallback path only.
+- `apps/question-expander` is the product-app counterpart for question expansion; this repo remains the demo/prototype home.
 - Validation in the new location succeeded with:
   - `cd demos/question-expander && npm install --prefer-offline --no-audit --no-fund`
   - `cd demos/question-expander && npm run build`
@@ -110,3 +118,4 @@
   - `tools/question-expander-adapter.mjs`
   - `demos/question-expander/tools/llm-agent-bridge.mjs`
 - `adapter:replay` still carries a legacy fallback chain-log path and should be cleaned up later, after protocol/log placement is finalized.
+- If this file diverges from `demos/halfway-demos/docs/PROJECT_STATUS.md`, treat the demo-repo document as authoritative.

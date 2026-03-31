@@ -1,5 +1,8 @@
 # @halfway-lab/reading-note
 
+Legacy note: inside the Halfway-Lab workspace, this path is retained only as historical protocol-local context.
+Active package ownership lives at `/Users/mac/Documents/Halfway-Lab/packages/reading-note`.
+
 A reading-note package backed by the local HWP protocol runner.
 
 Within the Halfway-Lab workspace, the primary package home is `packages/reading-note`.
