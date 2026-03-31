@@ -39,6 +39,12 @@ Then open:
 http://127.0.0.1:8088/dashboard
 ```
 
+You can also point the page at a specific chain / report:
+
+```text
+http://127.0.0.1:8088/dashboard?chain=chain_hwp_xxx.jsonl&report=20260331T141118&multi_report=multi_20260331T141500
+```
+
 JSON snapshot:
 
 ```text

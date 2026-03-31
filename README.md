@@ -530,6 +530,12 @@ python3 hwp_server.py --host 127.0.0.1 --port 8088
 http://127.0.0.1:8088/dashboard
 ```
 
+页面现在支持直接切换指定资源，例如：
+
+```text
+http://127.0.0.1:8088/dashboard?chain=chain_hwp_xxx.jsonl&report=20260331T141118&multi_report=multi_20260331T141500
+```
+
 如果你想直接消费结构化数据，也可以访问：
 
 ```text

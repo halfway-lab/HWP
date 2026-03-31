@@ -1,4 +1,5 @@
 import json
+import os
 import tempfile
 import unittest
 from pathlib import Path
@@ -8,6 +9,26 @@ import hwp_server
 
 
 class DashboardServerTests(unittest.TestCase):
+    def test_list_helpers_return_sorted_names(self) -> None:
+        with tempfile.TemporaryDirectory() as tmpdir:
+            logs_dir = Path(tmpdir) / "logs"
+            reports_dir = Path(tmpdir) / "reports" / "benchmarks"
+            logs_dir.mkdir(parents=True)
+            reports_dir.mkdir(parents=True)
+            older = logs_dir / "chain_hwp_a.jsonl"
+            newer = logs_dir / "chain_hwp_b.jsonl"
+            older.write_text("{}", encoding="utf-8")
+            newer.write_text("{}", encoding="utf-8")
+            os.utime(older, (1, 1))
+            os.utime(newer, (2, 2))
+            (reports_dir / "20260331T150000").mkdir()
+            (reports_dir / "20260330T150000").mkdir()
+            (reports_dir / "multi_20260331T150000").mkdir()
+            with patch.object(hwp_server, "LOGS_DIR", logs_dir), patch.object(hwp_server, "REPORTS_DIR", reports_dir):
+                self.assertEqual(hwp_server.list_benchmark_report_names(), ["20260331T150000", "20260330T150000"])
+                self.assertEqual(hwp_server.list_multi_provider_report_names(), ["multi_20260331T150000"])
+                self.assertEqual([Path(item).name for item in hwp_server.list_chain_paths()], ["chain_hwp_b.jsonl", "chain_hwp_a.jsonl"])
+
     def test_load_chain_snapshot_returns_latest_round_and_count(self) -> None:
         with tempfile.NamedTemporaryFile("w+", suffix=".jsonl", delete=False) as handle:
             handle.write(
@@ -163,6 +184,72 @@ class DashboardServerTests(unittest.TestCase):
         snapshot = hwp_server.api_index_snapshot()
         self.assertIn("/api/dashboard", snapshot["endpoints"])
         self.assertIn("/api/chain/latest", snapshot["query_params"])
+
+    def test_dashboard_snapshot_with_selection_tracks_available_lists(self) -> None:
+        with tempfile.TemporaryDirectory() as tmpdir:
+            root = Path(tmpdir)
+            logs_dir = root / "logs"
+            reports_dir = root / "reports" / "benchmarks"
+            logs_dir.mkdir(parents=True)
+            reports_dir.mkdir(parents=True)
+            chain_path = logs_dir / "chain_hwp_demo.jsonl"
+            chain_path.write_text(
+                json.dumps(
+                    {
+                        "payloads": [
+                            {
+                                "text": json.dumps(
+                                    {
+                                        "round": 1,
+                                        "speed_metrics": {"mode": "Rg0"},
+                                        "continuity_score": 1.0,
+                                        "blind_spot_score": 0.0,
+                                        "collapse_detected": False,
+                                        "recovery_applied": False,
+                                    }
+                                )
+                            }
+                        ]
+                    }
+                )
+                + "\n",
+                encoding="utf-8",
+            )
+            report_dir = reports_dir / "20260331T150000"
+            report_dir.mkdir()
+            (report_dir / "overview.tsv").write_text(
+                "benchmark\trun_status\tverifier_status\tduration_sec\tlog_count\ttiming_chains\ttiming_rounds\tround_avg_sec\tround_max_sec\tchain_avg_sec\tchain_max_sec\tfailure_reason\treport_dir\n"
+                "probe\tpass\tpass\t12\t1\t1\t8\t0.90\t1.05\t11.37\t11.37\t\t/tmp/probe\n",
+                encoding="utf-8",
+            )
+            with patch.object(hwp_server, "LOGS_DIR", logs_dir), patch.object(hwp_server, "REPORTS_DIR", reports_dir):
+                snapshot = hwp_server.dashboard_snapshot_with_selection(
+                    chain_path=str(chain_path),
+                    benchmark_report="20260331T150000",
+                )
+            self.assertEqual(snapshot["selected_benchmark_report"], "20260331T150000")
+            self.assertTrue(snapshot["available_benchmark_reports"])
+            self.assertEqual(snapshot["latest_round"]["mode"], "Rg0")
+
+    def test_render_dashboard_html_contains_selection_controls(self) -> None:
+        html = hwp_server.render_dashboard_html(
+            {
+                "latest_chain": "/tmp/chain.jsonl",
+                "latest_round": {"round": 8, "mode": "Rg1", "continuity_score": 0.9, "blind_spot_score": 0.4},
+                "chain_rounds": [{"round": 1, "mode": "Rg0", "continuity_score": 1.0, "blind_spot_score": 0.0, "collapse_detected": False, "recovery_applied": False}],
+                "benchmark": {"report_name": "20260331T141118", "report_dir": "/tmp/report", "overview_rows": []},
+                "multi_provider": {"report_name": "multi_20260331T141500", "report_dir": "/tmp/multi", "providers": []},
+                "available_chains": ["logs/chain_hwp_demo.jsonl"],
+                "available_benchmark_reports": ["20260331T141118"],
+                "available_multi_provider_reports": ["multi_20260331T141500"],
+                "selected_chain": "logs/chain_hwp_demo.jsonl",
+                "selected_benchmark_report": "20260331T141118",
+                "selected_multi_provider_report": "multi_20260331T141500",
+            }
+        )
+        self.assertIn("Load Selection", html)
+        self.assertIn("Benchmark Report", html)
+        self.assertIn("Multi-Provider Report", html)
 
 
 if __name__ == "__main__":

@@ -10,6 +10,7 @@ import csv
 from http.server import BaseHTTPRequestHandler, HTTPServer
 import json
 from urllib.parse import parse_qs, urlparse
+from urllib.parse import urlencode
 from pathlib import Path
 import subprocess
 import tempfile
@@ -31,6 +32,11 @@ def latest_chain_path() -> str:
         raise FileNotFoundError(f"no chain logs found in {LOGS_DIR}")
     return str(candidates[0])
 
+
+def list_chain_paths(limit: int = 20) -> list[str]:
+    candidates = sorted(LOGS_DIR.glob("chain_hwp_*.jsonl"), key=lambda item: item.stat().st_mtime, reverse=True)
+    return [str(path) for path in candidates[:limit]]
+
 def last_round_inner_json(chain_path: str) -> dict:
     with open(chain_path, "r", encoding="utf-8") as handle:
         lines = [line.strip() for line in handle if line.strip()]
@@ -50,6 +56,14 @@ def latest_benchmark_report_dir() -> Path | None:
     return candidates[0] if candidates else None
 
 
+def list_benchmark_report_names(limit: int = 20) -> list[str]:
+    candidates = sorted(
+        [path.name for path in REPORTS_DIR.glob("20*") if path.is_dir()],
+        reverse=True,
+    )
+    return candidates[:limit]
+
+
 def latest_multi_provider_report_dir() -> Path | None:
     candidates = sorted(
         [path for path in REPORTS_DIR.glob("multi_*") if path.is_dir()],
@@ -57,6 +71,14 @@ def latest_multi_provider_report_dir() -> Path | None:
         reverse=True,
     )
     return candidates[0] if candidates else None
+
+
+def list_multi_provider_report_names(limit: int = 20) -> list[str]:
+    candidates = sorted(
+        [path.name for path in REPORTS_DIR.glob("multi_*") if path.is_dir()],
+        reverse=True,
+    )
+    return candidates[:limit]
 
 
 def load_key_value_file(path: Path) -> dict[str, str]:
@@ -221,6 +243,45 @@ def dashboard_snapshot() -> dict:
     return snapshot
 
 
+def dashboard_snapshot_with_selection(
+    chain_path: str | None = None,
+    benchmark_report: str | None = None,
+    multi_provider_report: str | None = None,
+) -> dict:
+    snapshot: dict[str, object] = {
+        "repo_root": str(REPO_ROOT),
+        "latest_chain": None,
+        "latest_round": None,
+        "chain_rounds": [],
+        "available_chains": list_chain_paths(),
+        "available_benchmark_reports": list_benchmark_report_names(),
+        "available_multi_provider_reports": list_multi_provider_report_names(),
+        "selected_chain": chain_path or "",
+        "selected_benchmark_report": benchmark_report or "",
+        "selected_multi_provider_report": multi_provider_report or "",
+    }
+
+    try:
+        snapshot["benchmark"] = load_benchmark_snapshot(benchmark_report)
+    except FileNotFoundError:
+        snapshot["benchmark"] = {}
+
+    try:
+        snapshot["multi_provider"] = load_multi_provider_snapshot(multi_provider_report)
+    except FileNotFoundError:
+        snapshot["multi_provider"] = {}
+
+    try:
+        chain_snapshot = load_chain_snapshot(chain_path)
+    except FileNotFoundError:
+        return snapshot
+
+    snapshot["latest_chain"] = chain_snapshot["chain_path"]
+    snapshot["chain_rounds"] = chain_snapshot["rounds"]
+    snapshot["latest_round"] = chain_snapshot["latest_round"]
+    return snapshot
+
+
 def api_index_snapshot() -> dict:
     return {
         "endpoints": {
@@ -246,6 +307,18 @@ def render_table(headers: list[str], rows: list[list[str]]) -> str:
         cells = "".join(f"<td>{escape(item)}</td>" for item in row)
         body.append(f"<tr>{cells}</tr>")
     return f"<table><thead><tr>{head}</tr></thead><tbody>{''.join(body)}</tbody></table>"
+
+
+def render_picker(title: str, field_name: str, current_value: str, options: list[str], hint: str) -> str:
+    option_tags = ['<option value="">Latest</option>']
+    for option in options:
+        selected = ' selected' if option == current_value else ""
+        option_tags.append(f'<option value="{escape(option)}"{selected}>{escape(option)}</option>')
+    return (
+        f"<label class='picker'><span>{escape(title)}</span>"
+        f"<select name='{escape(field_name)}'>{''.join(option_tags)}</select>"
+        f"<small>{escape(hint)}</small></label>"
+    )
 
 
 def render_dashboard_html(snapshot: dict) -> str:
@@ -302,6 +375,13 @@ def render_dashboard_html(snapshot: dict) -> str:
     latest_chain = snapshot.get("latest_chain") or "(none)"
     latest_benchmark_dir = benchmark.get("report_dir") or "(none)"
     latest_multi_dir = multi_provider.get("report_dir") or "(none)"
+    chain_options = [Path(item).name for item in (snapshot.get("available_chains") or [])]
+    benchmark_options = list(snapshot.get("available_benchmark_reports") or [])
+    multi_options = list(snapshot.get("available_multi_provider_reports") or [])
+    selected_chain_name = Path(str(snapshot.get("selected_chain") or latest_chain)).name if latest_chain != "(none)" else ""
+    selected_benchmark = str(snapshot.get("selected_benchmark_report") or benchmark.get("report_name") or "")
+    selected_multi = str(snapshot.get("selected_multi_provider_report") or multi_provider.get("report_name") or "")
+    latest_chain_name = Path(str(latest_chain)).name if latest_chain != "(none)" else ""
 
     return f"""<!doctype html>
 <html lang="en">
@@ -361,6 +441,49 @@ def render_dashboard_html(snapshot: dict) -> str:
       gap: 18px;
       margin-top: 24px;
     }}
+    .controls {{
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      gap: 14px;
+      margin-top: 24px;
+      align-items: end;
+    }}
+    .picker {{
+      display: grid;
+      gap: 6px;
+      font-size: 14px;
+      color: var(--muted);
+    }}
+    .picker span {{ color: var(--ink); font-weight: 600; }}
+    .picker select {{
+      width: 100%;
+      padding: 10px 12px;
+      border-radius: 12px;
+      border: 1px solid var(--line);
+      background: #fffdf8;
+      color: var(--ink);
+    }}
+    .picker small {{ color: var(--muted); }}
+    .actions {{
+      display: flex;
+      gap: 10px;
+      align-items: center;
+      flex-wrap: wrap;
+    }}
+    .button {{
+      display: inline-block;
+      padding: 10px 14px;
+      border-radius: 12px;
+      border: 1px solid var(--line);
+      text-decoration: none;
+      color: var(--ink);
+      background: #fffdf8;
+    }}
+    .button.primary {{
+      background: var(--accent);
+      border-color: var(--accent);
+      color: #fffaf2;
+    }}
     .panel.full {{ grid-column: 1 / -1; }}
     table {{ width: 100%; border-collapse: collapse; font-size: 14px; }}
     th, td {{ text-align: left; padding: 10px 8px; border-bottom: 1px solid var(--line); vertical-align: top; }}
@@ -412,10 +535,20 @@ def render_dashboard_html(snapshot: dict) -> str:
         <p>Latest blind spot score</p>
       </article>
     </section>
+    <form class="controls" method="get" action="/dashboard">
+      {render_picker("Chain", "chain", selected_chain_name, chain_options, "Choose a specific chain log or keep Latest.")}
+      {render_picker("Benchmark Report", "report", selected_benchmark, benchmark_options, "Choose a benchmark report directory.")}
+      {render_picker("Multi-Provider Report", "multi_report", selected_multi, multi_options, "Choose a multi-provider report directory.")}
+      <div class="actions">
+        <button class="button primary" type="submit">Load Selection</button>
+        <a class="button" href="/dashboard">Reset To Latest</a>
+      </div>
+    </form>
     <section class="grid">
       <article class="panel">
         <h2>Sources</h2>
         <p><strong>Chain:</strong> <code>{escape(str(latest_chain))}</code></p>
+        <p><strong>Chain Name:</strong> {escape(latest_chain_name)}</p>
         <p><strong>Benchmark:</strong> <code>{escape(str(latest_benchmark_dir))}</code></p>
         <p><strong>Multi-Provider:</strong> <code>{escape(str(latest_multi_dir))}</code></p>
       </article>
@@ -468,7 +601,22 @@ class Handler(BaseHTTPRequestHandler):
         query = parse_qs(parsed.query)
 
         if route in ("/", "/dashboard"):
-            return self._send_html(200, render_dashboard_html(dashboard_snapshot()))
+            chain_name = query.get("chain", [None])[0]
+            benchmark_report = query.get("report", [None])[0]
+            multi_report = query.get("multi_report", [None])[0]
+            chain_path = None
+            if chain_name:
+                chain_path = str(LOGS_DIR / chain_name)
+            return self._send_html(
+                200,
+                render_dashboard_html(
+                    dashboard_snapshot_with_selection(
+                        chain_path=chain_path,
+                        benchmark_report=benchmark_report,
+                        multi_provider_report=multi_report,
+                    )
+                ),
+            )
         if route == "/api":
             return self._send(200, api_index_snapshot())
         if route == "/api/dashboard":
