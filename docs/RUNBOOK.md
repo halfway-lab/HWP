@@ -45,6 +45,23 @@ JSON snapshot:
 http://127.0.0.1:8088/api/dashboard
 ```
 
+Other JSON endpoints:
+
+```text
+http://127.0.0.1:8088/api
+http://127.0.0.1:8088/api/chain/latest
+http://127.0.0.1:8088/api/benchmark/latest
+http://127.0.0.1:8088/api/multi-provider/latest
+```
+
+Optional query params:
+
+```text
+/api/chain/latest?path=logs/chain_hwp_xxx.jsonl
+/api/benchmark/latest?report=20260331T141118
+/api/multi-provider/latest?report=multi_20260331T141500
+```
+
 ## Validate Provider Setup Without Network
 
 ```bash

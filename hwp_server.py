@@ -9,6 +9,7 @@ import argparse
 import csv
 from http.server import BaseHTTPRequestHandler, HTTPServer
 import json
+from urllib.parse import parse_qs, urlparse
 from pathlib import Path
 import subprocess
 import tempfile
@@ -104,11 +105,52 @@ def load_chain_rounds(chain_path: str) -> list[dict]:
     return rounds
 
 
+def resolve_chain_path(chain_path: str | None = None) -> str:
+    if chain_path:
+        candidate = Path(chain_path)
+        if not candidate.is_absolute():
+            candidate = REPO_ROOT / chain_path
+        if not candidate.exists():
+            raise FileNotFoundError(f"chain log not found: {candidate}")
+        return str(candidate)
+    return latest_chain_path()
+
+
+def resolve_benchmark_report_dir(report_name: str | None = None) -> Path:
+    if report_name:
+        candidate = REPORTS_DIR / report_name
+        if not candidate.exists():
+            raise FileNotFoundError(f"benchmark report not found: {candidate}")
+        return candidate
+    latest = latest_benchmark_report_dir()
+    if latest is None:
+        raise FileNotFoundError(f"no benchmark reports found in {REPORTS_DIR}")
+    return latest
+
+
+def resolve_multi_provider_report_dir(report_name: str | None = None) -> Path:
+    if report_name:
+        candidate = REPORTS_DIR / report_name
+        if not candidate.exists():
+            raise FileNotFoundError(f"multi-provider report not found: {candidate}")
+        return candidate
+    latest = latest_multi_provider_report_dir()
+    if latest is None:
+        raise FileNotFoundError(f"no multi-provider reports found in {REPORTS_DIR}")
+    return latest
+
+
 def load_latest_benchmark_snapshot() -> dict:
     report_dir = latest_benchmark_report_dir()
     if report_dir is None:
         return {}
+    return load_benchmark_snapshot(report_dir.name)
+
+
+def load_benchmark_snapshot(report_name: str | None = None) -> dict:
+    report_dir = resolve_benchmark_report_dir(report_name)
     return {
+        "report_name": report_dir.name,
         "report_dir": str(report_dir),
         "context": load_key_value_file(report_dir / "context.txt"),
         "overview_rows": load_tsv_rows(report_dir / "overview.tsv"),
@@ -119,6 +161,11 @@ def load_latest_multi_provider_snapshot() -> dict:
     report_dir = latest_multi_provider_report_dir()
     if report_dir is None:
         return {}
+    return load_multi_provider_snapshot(report_dir.name)
+
+
+def load_multi_provider_snapshot(report_name: str | None = None) -> dict:
+    report_dir = resolve_multi_provider_report_dir(report_name)
 
     provider_data = load_provider_results(report_dir)
     providers = []
@@ -137,8 +184,20 @@ def load_latest_multi_provider_snapshot() -> dict:
             }
         )
     return {
+        "report_name": report_dir.name,
         "report_dir": str(report_dir),
         "providers": providers,
+    }
+
+
+def load_chain_snapshot(chain_path: str | None = None) -> dict:
+    resolved_path = resolve_chain_path(chain_path)
+    rounds = load_chain_rounds(resolved_path)
+    return {
+        "chain_path": resolved_path,
+        "round_count": len(rounds),
+        "latest_round": rounds[-1] if rounds else None,
+        "rounds": rounds,
     }
 
 
@@ -152,15 +211,30 @@ def dashboard_snapshot() -> dict:
         "multi_provider": load_latest_multi_provider_snapshot(),
     }
     try:
-        chain_path = latest_chain_path()
+        chain_snapshot = load_chain_snapshot()
     except FileNotFoundError:
         return snapshot
 
-    rounds = load_chain_rounds(chain_path)
-    snapshot["latest_chain"] = chain_path
-    snapshot["chain_rounds"] = rounds
-    snapshot["latest_round"] = rounds[-1] if rounds else None
+    snapshot["latest_chain"] = chain_snapshot["chain_path"]
+    snapshot["chain_rounds"] = chain_snapshot["rounds"]
+    snapshot["latest_round"] = chain_snapshot["latest_round"]
     return snapshot
+
+
+def api_index_snapshot() -> dict:
+    return {
+        "endpoints": {
+            "/api/dashboard": "Combined latest snapshot for chain, benchmark, and multi-provider.",
+            "/api/chain/latest": "Latest chain rounds and latest round summary.",
+            "/api/benchmark/latest": "Latest single-provider benchmark overview and context.",
+            "/api/multi-provider/latest": "Latest multi-provider overview table.",
+        },
+        "query_params": {
+            "/api/chain/latest": ["path=<relative-or-absolute-chain-path>"],
+            "/api/benchmark/latest": ["report=<benchmark-report-dir-name>"],
+            "/api/multi-provider/latest": ["report=<multi-report-dir-name>"],
+        },
+    }
 
 
 def render_table(headers: list[str], rows: list[list[str]]) -> str:
@@ -389,10 +463,34 @@ class Handler(BaseHTTPRequestHandler):
         self.wfile.write(body)
 
     def do_GET(self):
-        if self.path in ("/", "/dashboard"):
+        parsed = urlparse(self.path)
+        route = parsed.path
+        query = parse_qs(parsed.query)
+
+        if route in ("/", "/dashboard"):
             return self._send_html(200, render_dashboard_html(dashboard_snapshot()))
-        if self.path == "/api/dashboard":
+        if route == "/api":
+            return self._send(200, api_index_snapshot())
+        if route == "/api/dashboard":
             return self._send(200, dashboard_snapshot())
+        if route == "/api/chain/latest":
+            try:
+                chain_path = query.get("path", [None])[0]
+                return self._send(200, load_chain_snapshot(chain_path))
+            except FileNotFoundError as exc:
+                return self._send(404, {"error": "not found", "detail": str(exc)})
+        if route == "/api/benchmark/latest":
+            try:
+                report_name = query.get("report", [None])[0]
+                return self._send(200, load_benchmark_snapshot(report_name))
+            except FileNotFoundError as exc:
+                return self._send(404, {"error": "not found", "detail": str(exc)})
+        if route == "/api/multi-provider/latest":
+            try:
+                report_name = query.get("report", [None])[0]
+                return self._send(200, load_multi_provider_snapshot(report_name))
+            except FileNotFoundError as exc:
+                return self._send(404, {"error": "not found", "detail": str(exc)})
         return self._send(404, {"error": "not found"})
 
     def do_POST(self):
