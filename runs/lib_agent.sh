@@ -19,6 +19,7 @@ _hwp_cli_provider_config=""
 _hwp_cli_provider_type=""
 _hwp_cli_provider_name=""
 HWP_SHOW_HELP=""
+HWP_DRY_RUN=""
 
 resolve_hwp_root_dir() {
   local script_source="${BASH_SOURCE[0]}"
@@ -35,6 +36,7 @@ default_hwp_provider_config() {
 parse_hwp_provider_args() {
   HWP_INPUT_FILE=""
   HWP_SHOW_HELP=""
+  HWP_DRY_RUN=""
   _hwp_cli_agent_bin=""
   _hwp_cli_agent_cmd=""
   _hwp_cli_replay_chain_path=""
@@ -75,6 +77,10 @@ parse_hwp_provider_args() {
         ;;
       --help|-h)
         HWP_SHOW_HELP="1"
+        shift
+        ;;
+      --dry-run)
+        HWP_DRY_RUN="1"
         shift
         ;;
       --*)
@@ -280,6 +286,125 @@ require_hwp_agent_provider() {
     echo "错误：未找到 agent 命令: $HWP_AGENT_BIN" >&2
     echo "请先安装/配置 OpenClaw，或设置 HWP_AGENT_CMD 以接入其他模型适配脚本。" >&2
     exit 1
+  fi
+}
+
+print_hwp_provider_summary() {
+  local resolved_type
+  resolved_type="$(resolve_hwp_provider_alias "$HWP_PROVIDER_TYPE" "$HWP_PROVIDER_NAME")"
+
+  echo "HWP provider summary:"
+  echo "  config: ${HWP_PROVIDER_CONFIG:-"(default/none)"}"
+  echo "  provider_type: ${HWP_PROVIDER_TYPE:-"(unset)"}"
+  echo "  provider_name: ${HWP_PROVIDER_NAME:-"(unset)"}"
+  echo "  resolved_type: ${resolved_type:-"(unset)"}"
+  echo "  replay_chain: ${HWP_REPLAY_CHAIN_PATH:-"(none)"}"
+  if [ -n "${HWP_REPLAY_CHAIN_PATH:-}" ]; then
+    echo "  active_transport: replay_chain"
+    echo "  agent_bin: (inactive)"
+    echo "  agent_cmd: (inactive)"
+  elif [ -n "${HWP_AGENT_CMD:-}" ]; then
+    echo "  active_transport: agent_cmd"
+    echo "  agent_bin: (inactive)"
+    echo "  agent_cmd: ${HWP_AGENT_CMD}"
+  else
+    echo "  active_transport: agent_bin"
+    echo "  agent_bin: ${HWP_AGENT_BIN:-"(unset)"}"
+    echo "  agent_cmd: (inactive)"
+  fi
+}
+
+is_hwp_placeholder_value() {
+  local value="${1:-}"
+  case "$value" in
+    "" )
+      return 1
+      ;;
+    your_*|YOUR_*|*your_api_key_here*|*your_model_here*|*your_local_model_here*|*example.com*|dummy|dummy-* )
+      return 0
+      ;;
+    *YOUR_KEY*|*YOUR_MODEL* )
+      return 0
+      ;;
+    * )
+      return 1
+      ;;
+  esac
+}
+
+validate_hwp_provider_setup() {
+  local resolved_type provider_name
+  resolved_type="$(resolve_hwp_provider_alias "$HWP_PROVIDER_TYPE" "$HWP_PROVIDER_NAME")"
+  provider_name="$(printf '%s' "${HWP_PROVIDER_NAME:-}" | tr '[:upper:]' '[:lower:]')"
+
+  if [ -n "$HWP_REPLAY_CHAIN_PATH" ]; then
+    if [ ! -f "$HWP_REPLAY_CHAIN_PATH" ]; then
+      echo "错误：回放链文件不存在: $HWP_REPLAY_CHAIN_PATH" >&2
+      return 1
+    fi
+    return 0
+  fi
+
+  case "$resolved_type" in
+    openai_compatible)
+      [ -n "${HWP_LLM_API_KEY:-${OPENAI_API_KEY:-}}" ] || { echo "错误：缺少 HWP_LLM_API_KEY（或 OPENAI_API_KEY）" >&2; return 1; }
+      [ -n "${HWP_LLM_MODEL:-${OPENAI_MODEL:-}}" ] || { echo "错误：缺少 HWP_LLM_MODEL（或 OPENAI_MODEL）" >&2; return 1; }
+      case "$provider_name" in
+        ""|openai|openrouter|deepseek|moonshot|kimi|siliconflow|groq|together|fireworks|perplexity|xai)
+          ;;
+        *)
+          [ -n "${HWP_LLM_BASE_URL:-${OPENAI_BASE_URL:-}}" ] || {
+            echo "错误：custom/unknown OpenAI-compatible provider 需要显式设置 HWP_LLM_BASE_URL" >&2
+            return 1
+          }
+          ;;
+      esac
+      ;;
+    ollama)
+      [ -n "${OLLAMA_MODEL:-}" ] || { echo "错误：缺少 OLLAMA_MODEL" >&2; return 1; }
+      ;;
+    openclaw)
+      if ! command -v "${HWP_AGENT_BIN:-openclaw}" >/dev/null 2>&1; then
+        echo "错误：未找到 agent 命令: ${HWP_AGENT_BIN:-openclaw}" >&2
+        return 1
+      fi
+      ;;
+    custom)
+      [ -n "${HWP_AGENT_CMD:-}" ] || { echo "错误：custom provider 需要设置 HWP_AGENT_CMD" >&2; return 1; }
+      ;;
+    *)
+      if [ -z "${HWP_AGENT_CMD:-}" ] && [ -z "${HWP_REPLAY_CHAIN_PATH:-}" ]; then
+        echo "错误：无法解析 provider，请设置 HWP_PROVIDER_TYPE / HWP_PROVIDER_NAME 或 HWP_AGENT_CMD" >&2
+        return 1
+      fi
+      ;;
+  esac
+
+  return 0
+}
+
+print_hwp_provider_warnings() {
+  local warnings=()
+
+  if is_hwp_placeholder_value "${HWP_LLM_API_KEY:-${OPENAI_API_KEY:-}}"; then
+    warnings+=("HWP_LLM_API_KEY still looks like a placeholder")
+  fi
+  if is_hwp_placeholder_value "${HWP_LLM_MODEL:-${OPENAI_MODEL:-}}"; then
+    warnings+=("HWP_LLM_MODEL still looks like a placeholder")
+  fi
+  if is_hwp_placeholder_value "${HWP_LLM_BASE_URL:-${OPENAI_BASE_URL:-}}"; then
+    warnings+=("HWP_LLM_BASE_URL still looks like a placeholder")
+  fi
+  if is_hwp_placeholder_value "${OLLAMA_MODEL:-}"; then
+    warnings+=("OLLAMA_MODEL still looks like a placeholder")
+  fi
+
+  if [ "${#warnings[@]}" -gt 0 ]; then
+    echo "Warnings:"
+    local item
+    for item in "${warnings[@]}"; do
+      echo "  - $item"
+    done
   fi
 }
 

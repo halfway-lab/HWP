@@ -14,6 +14,17 @@ def clamp01(value: float) -> float:
     return value
 
 
+def safe_float(value: Any, default: float) -> float:
+    try:
+        return float(value)
+    except (TypeError, ValueError):
+        return default
+
+
+def round_metric(value: float) -> float:
+    return round(value, 2)
+
+
 def clamp_int(value: Any, minimum: int, maximum: int) -> int:
     try:
         numeric = int(value)
@@ -125,8 +136,15 @@ def blind_spot_score_from_signals(signals: list[dict[str, Any]]) -> float:
 def semantic_group_id(variables: list[Any]) -> str:
     if not variables:
         return "sg_empty"
-    base = re.sub(r"[^a-z0-9]+", "_", str(variables[0]).lower()).strip("_")
-    return "sg_" + (base or "empty")
+    normalized = [
+        re.sub(r"[^a-z0-9]+", "_", str(value).lower()).strip("_")
+        for value in variables
+        if str(value).strip()
+    ]
+    if not normalized:
+        return "sg_empty"
+    head = "_".join(sorted(set(normalized))[:3])[:48].strip("_") or "empty"
+    return "sg_" + head
 
 
 def semantic_nodes(variables: list[Any]) -> list[dict[str, Any]]:
@@ -159,7 +177,7 @@ def semantic_group_payload(variables: list[Any], round_num: int, drift: float, s
                 "created_round": 1,
                 "last_expanded_round": round_num,
                 "expansion_count": round_num - 1,
-                "identifier_stable": shared >= 10,
+                "identifier_stable": shared >= max(min(len(variables), 10), 1),
             },
         }
     ]
@@ -203,6 +221,92 @@ def normalize_variable_payload(result: dict[str, Any]) -> list[str]:
     return normalized
 
 
+def derive_metric_snapshot(
+    result: dict[str, Any],
+    variables: list[str],
+    parent_recovery_applied: bool,
+) -> dict[str, Any]:
+    variable_count = len(variables)
+    parent_id = result.get("parent_id")
+    shared_count = clamp_int(result.get("shared_variable_count", 0), 0, variable_count if variable_count else 0)
+
+    if parent_id is None:
+        shared_count = 0
+        drift_rate = 0.0
+        novelty_rate = 1.0
+        collapse_detected = False
+        recovery_applied = False
+        mode = "Rg0"
+    else:
+        drift_rate = 1.0 if variable_count == 0 else round_metric(clamp01(1 - (shared_count / variable_count)))
+        novelty_rate = 0.0 if variable_count == 0 else round_metric(clamp01((variable_count - shared_count) / variable_count))
+        entropy_score = safe_float(result.get("entropy_score"), 0.0)
+        collapse_detected = (
+            variable_count > 30
+            or drift_rate >= 0.70
+            or (entropy_score >= 0.80 and drift_rate >= 0.30)
+            or (novelty_rate <= 0.12 and drift_rate >= 0.30)
+        )
+        recovery_applied = collapse_detected
+        if collapse_detected or parent_recovery_applied:
+            mode = "Rg0"
+        elif drift_rate < 0.30:
+            mode = "Rg1"
+        elif drift_rate > 0.70:
+            mode = "Rg2"
+        else:
+            mode = "Rg0"
+
+    return {
+        "shared_variable_count": shared_count,
+        "drift_rate": drift_rate,
+        "novelty_rate": novelty_rate,
+        "collapse_detected": collapse_detected,
+        "recovery_applied": recovery_applied,
+        "mode": mode,
+    }
+
+
+def apply_protocol_defaults(
+    result: dict[str, Any],
+    variables: list[str],
+    parent_recovery_applied: bool,
+) -> None:
+    snapshot = derive_metric_snapshot(result, variables, parent_recovery_applied)
+    result["shared_variable_count"] = snapshot["shared_variable_count"]
+    result["drift_rate"] = snapshot["drift_rate"]
+    result["novelty_rate"] = snapshot["novelty_rate"]
+    result["collapse_detected"] = snapshot["collapse_detected"]
+    result["recovery_applied"] = snapshot["recovery_applied"]
+
+    speed_metrics = result.get("speed_metrics")
+    if not isinstance(speed_metrics, Mapping):
+        speed_metrics = {}
+    else:
+        speed_metrics = dict(speed_metrics)
+    actions = speed_metrics.get("action_taken")
+    if isinstance(actions, list):
+        action_taken = list(actions)
+    else:
+        action_taken = []
+    speed_metrics["mode"] = snapshot["mode"]
+    speed_metrics["unfinished_inherited_count"] = clamp_int(
+        speed_metrics.get("unfinished_inherited_count", 0),
+        0,
+        len(result.get("unfinished") or []),
+    )
+    speed_metrics["action_taken"] = action_taken
+    result["speed_metrics"] = speed_metrics
+
+    if snapshot["recovery_applied"]:
+        keep_count = snapshot["shared_variable_count"]
+        result["recovery_kept_variables"] = variables[:keep_count]
+        result["recovery_new_variables"] = variables[keep_count:]
+    else:
+        result.pop("recovery_kept_variables", None)
+        result.pop("recovery_new_variables", None)
+
+
 def enrich_inner_json(inner: dict[str, Any], round_num: int, parent_recovery_applied: bool) -> dict[str, Any]:
     inner = ensure_object(inner, "inner_json")
     normalized_tensions = normalize_tensions(inner)
@@ -210,6 +314,7 @@ def enrich_inner_json(inner: dict[str, Any], round_num: int, parent_recovery_app
     result = dict(inner)
     result["tensions"] = normalized_tensions
     variables = normalize_variable_payload(result)
+    apply_protocol_defaults(result, variables, parent_recovery_applied)
 
     if "blind_spot_signals" not in result:
         result["blind_spot_signals"] = derived_signals
@@ -226,8 +331,8 @@ def enrich_inner_json(inner: dict[str, Any], round_num: int, parent_recovery_app
     if "semantic_groups" not in result:
         result["semantic_groups"] = semantic_group_payload(
             variables,
-            int(result.get("round", 1)),
-            float(result.get("drift_rate", 0.35)),
+            int(result.get("round", round_num)),
+            safe_float(result.get("drift_rate"), 0.35),
             clamp_int(result.get("shared_variable_count", 0), 0, len(variables) if variables else 0),
         )
     if "group_count" not in result:

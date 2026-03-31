@@ -5,6 +5,10 @@ from pathlib import Path
 from typing import Any
 
 
+def _is_number(value: Any) -> bool:
+    return isinstance(value, (int, float)) and not isinstance(value, bool)
+
+
 def validate_blind_spot(sample_data: dict[str, Any], _: dict[str, Any]) -> list[str]:
     errors: list[str] = []
 
@@ -60,17 +64,40 @@ def validate_continuity(sample_data: dict[str, Any], sample: dict[str, Any]) -> 
     variables = sample_data.get("variables", [])
     shared_count = sample_data.get("shared_variable_count", 0)
     drift_rate = sample_data.get("drift_rate", 0)
+    novelty_rate = sample_data.get("novelty_rate")
     tensions = sample_data.get("tensions", [])
     parent_id = sample_data.get("parent_id")
     collapse_detected = sample_data.get("collapse_detected", False)
+    recovery_applied = sample_data.get("recovery_applied", False)
+    parent_recovery_applied = sample_data.get("parent_recovery_applied", False)
+    entropy_score = sample_data.get("entropy_score")
 
-    if round_num > 1:
+    if not isinstance(variables, list):
+        errors.append("variables is not an array")
+        variables = []
+
+    variable_count = len(variables)
+    expected_drift = 1.0 if variable_count == 0 else round(1 - (shared_count / variable_count), 2)
+    expected_novelty = 0.0 if variable_count == 0 else round((variable_count - shared_count) / variable_count, 2)
+
+    if round_num == 1 or parent_id is None:
+        if shared_count != 0:
+            errors.append(f"round 1 shared_variable_count must be 0 (got {shared_count})")
+        if drift_rate != 0:
+            errors.append(f"round 1 drift_rate must be 0 (got {drift_rate})")
+        if novelty_rate != 1:
+            errors.append(f"round 1 novelty_rate must be 1 (got {novelty_rate})")
+        if collapse_detected is not False:
+            errors.append("round 1 collapse_detected must be false")
+        if recovery_applied is not False:
+            errors.append("round 1 recovery_applied must be false")
+    else:
         if shared_count < 10:
             errors.append(f"shared_variable_count too low: {shared_count} (threshold: 10)")
-        if drift_rate > 0.6:
-            errors.append(f"drift_rate too high: {drift_rate} (threshold: 0.6)")
-        if collapse_detected and drift_rate > 0.6:
-            errors.append(f"collapse_detected=true with high drift_rate: {drift_rate}")
+        if parent_recovery_applied and shared_count < 20:
+            errors.append(f"post-recovery shared_variable_count too low: {shared_count} (threshold: 20)")
+        if parent_recovery_applied and drift_rate > 0.34:
+            errors.append(f"post-recovery drift_rate too high: {drift_rate} (threshold: 0.34)")
 
     if round_num > 1 and len(tensions) == 0:
         errors.append("tensions array is empty (lost tension lineage)")
@@ -81,15 +108,45 @@ def validate_continuity(sample_data: dict[str, Any], sample: dict[str, Any]) -> 
     if len(variables) > 0:
         if shared_count > len(variables):
             errors.append(f"shared_variable_count ({shared_count}) exceeds total variables ({len(variables)})")
-        valid_prefixes = ("var_", "new_var_", "stabilized_")
-        actual_shared = sum(1 for value in variables if isinstance(value, str) and value.startswith(valid_prefixes))
-        if round_num > 1 and actual_shared > 0 and actual_shared - shared_count > 10:
+        actual_shared = sum(1 for value in variables if isinstance(value, str) and value.startswith("var_"))
+        if round_num > 1 and parent_id is not None and actual_shared > 0 and actual_shared != shared_count:
             errors.append(
                 f"shared_variable_count ({shared_count}) significantly less than actual shared variables ({actual_shared})"
             )
 
-    if collapse_detected and drift_rate < 0.5:
-        errors.append(f"collapse_detected=true but drift_rate ({drift_rate}) is low")
+    if round_num > 1 and parent_id is not None and variable_count > 0 and _is_number(drift_rate) and abs(drift_rate - expected_drift) > 0.02:
+        errors.append(f"drift_rate ({drift_rate}) inconsistent with shared_variable_count ({shared_count}) and variables ({variable_count})")
+
+    if novelty_rate is not None:
+        if not _is_number(novelty_rate):
+            errors.append(f"novelty_rate is not numeric: {type(novelty_rate)}")
+        elif round_num > 1 and parent_id is not None and variable_count > 0 and abs(novelty_rate - expected_novelty) > 0.02:
+            errors.append(
+                f"novelty_rate ({novelty_rate}) inconsistent with shared_variable_count ({shared_count}) and variables ({variable_count})"
+            )
+
+    expected_collapse = False
+    if round_num > 1 and parent_id is not None:
+        expected_collapse = (
+            variable_count > 30
+            or (_is_number(drift_rate) and drift_rate >= 0.70)
+            or (_is_number(entropy_score) and _is_number(drift_rate) and entropy_score >= 0.80 and drift_rate >= 0.30)
+            or (_is_number(novelty_rate) and _is_number(drift_rate) and novelty_rate <= 0.12 and drift_rate >= 0.30)
+        )
+
+    if collapse_detected != expected_collapse:
+        errors.append(f"collapse_detected expected {expected_collapse} but got {collapse_detected}")
+    if recovery_applied != collapse_detected:
+        errors.append(f"recovery_applied ({recovery_applied}) must equal collapse_detected ({collapse_detected})")
+
+    if recovery_applied:
+        if "recovery_kept_variables" not in sample_data:
+            errors.append("Missing recovery_kept_variables on recovery round")
+        if "recovery_new_variables" not in sample_data:
+            errors.append("Missing recovery_new_variables on recovery round")
+    else:
+        if "recovery_kept_variables" in sample_data or "recovery_new_variables" in sample_data:
+            errors.append("Recovery audit keys must be absent when recovery_applied=false")
 
     return errors
 

@@ -4,9 +4,11 @@
 # or `python3 -m hwp_protocol.cli ...`.
 set -euo pipefail
 
-BASE="$HOME/hwp-tests"
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+BASE="${HWP_REPO_PATH:-$SCRIPT_DIR}"
 if [ "$#" -lt 1 ]; then
   echo "Usage: $0 [--config PATH] [--provider-type TYPE] [--provider-name NAME] [--agent-bin PATH] [--agent-cmd CMD] [--replay-chain PATH] \"your input text\""
+  echo "Legacy helper: uses repo root at \$HWP_REPO_PATH when set, otherwise the directory containing hwp_cli.sh."
   exit 1
 fi
 
@@ -18,6 +20,7 @@ fi
 
 if [ -z "$INPUT" ]; then
   echo "Usage: $0 [--config PATH] [--provider-type TYPE] [--provider-name NAME] [--agent-bin PATH] [--agent-cmd CMD] [--replay-chain PATH] \"your input text\""
+  echo "Legacy helper: uses repo root at \$HWP_REPO_PATH when set, otherwise the directory containing hwp_cli.sh."
   exit 1
 fi
 

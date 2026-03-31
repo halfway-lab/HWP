@@ -37,8 +37,11 @@
 ## Entry Points
 
 - Main README: `README.md`
-- Main app/server entry: `hwp_server.py`
+- Main app/server entry: `runs/run_sequential.sh`
 - Main package entry: `hwp_protocol/cli.py`
+- Legacy compatibility entry:
+  - `hwp_server.py`
+  - `hwp_cli.sh`
 - Main test entry:
   - `tests/test_protocol_core.py`
   - `runs/verify_v06_all.sh`

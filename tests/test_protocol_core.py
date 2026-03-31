@@ -48,6 +48,64 @@ class TransformTests(unittest.TestCase):
         self.assertEqual(enriched["continuity_score"], 1)
         self.assertIn("state_snapshot", enriched)
         self.assertEqual(enriched["tensions"][0]["id"], "tension_01")
+        self.assertEqual(enriched["drift_rate"], 0.0)
+        self.assertEqual(enriched["novelty_rate"], 1.0)
+        self.assertFalse(enriched["collapse_detected"])
+        self.assertFalse(enriched["recovery_applied"])
+        self.assertEqual(enriched["speed_metrics"]["mode"], "Rg0")
+
+    def test_enrich_inner_json_derives_recovery_flags_and_audit_fields(self) -> None:
+        inner = {
+            "node_id": "n2",
+            "parent_id": "n1",
+            "round": 2,
+            "variables": [f"var_{idx:02d}" for idx in range(1, 6)] + [f"new_{idx:02d}" for idx in range(1, 26)],
+            "paths": [],
+            "tensions": ["tradeoff"],
+            "shared_variable_count": 5,
+            "drift_rate": 0.1,
+        }
+
+        enriched = enrich_inner_json(inner, round_num=2, parent_recovery_applied=False)
+
+        self.assertTrue(enriched["collapse_detected"])
+        self.assertTrue(enriched["recovery_applied"])
+        self.assertEqual(enriched["drift_rate"], 0.83)
+        self.assertEqual(enriched["novelty_rate"], 0.83)
+        self.assertEqual(len(enriched["recovery_kept_variables"]), 5)
+        self.assertEqual(len(enriched["recovery_new_variables"]), 25)
+        self.assertEqual(enriched["speed_metrics"]["mode"], "Rg0")
+
+    def test_semantic_group_id_is_stable_when_variable_order_changes(self) -> None:
+        first = enrich_inner_json(
+            {
+                "node_id": "n3",
+                "parent_id": "n2",
+                "round": 3,
+                "variables": ["Alpha", "Beta", "Gamma"],
+                "paths": [],
+                "tensions": ["tradeoff"],
+                "shared_variable_count": 3,
+            },
+            round_num=3,
+            parent_recovery_applied=False,
+        )
+        second = enrich_inner_json(
+            {
+                "node_id": "n4",
+                "parent_id": "n3",
+                "round": 4,
+                "variables": ["Gamma", "Alpha", "Beta"],
+                "paths": [],
+                "tensions": ["tradeoff"],
+                "shared_variable_count": 3,
+            },
+            round_num=4,
+            parent_recovery_applied=False,
+        )
+
+        self.assertEqual(first["semantic_groups"][0]["group_id"], second["semantic_groups"][0]["group_id"])
+        self.assertTrue(second["semantic_groups"][0]["group_metadata"]["identifier_stable"])
 
     def test_repack_projects_inner_fields_to_outer_log(self) -> None:
         inner = {
@@ -165,6 +223,15 @@ class LogVerifierTests(unittest.TestCase):
 
         self.assertTrue(any(item.status == "FAIL" for item in messages))
         self.assertTrue(any("blind_spot_score" in item.message for item in messages))
+
+    def test_blind_spot_message_collector_reads_inner_payload_fields(self) -> None:
+        inner = {"blind_spot_signals": [], "blind_spot_score": 0.4, "blind_spot_reason": ""}
+        path = self._write_log({"payloads": [{"text": json.dumps(inner), "mediaUrl": None}]})
+
+        messages = collect_blind_spot_messages(path)
+
+        self.assertTrue(any(item.status == "PASS" and "blind_spot_score" in item.message for item in messages))
+        self.assertTrue(any(item.status == "PASS" and "blind_spot_reason" in item.message for item in messages))
 
     def test_continuity_log_verifier_reports_round_and_state(self) -> None:
         inner = {"round": 2, "continuity_score": 0.66, "state_snapshot": {}}

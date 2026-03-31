@@ -5,23 +5,32 @@ CLI modules. This file remains in the repository because older docs and local
 workflows may still reference it.
 """
 
+import argparse
 from http.server import BaseHTTPRequestHandler, HTTPServer
 import json
+from pathlib import Path
 import subprocess
 import tempfile
 import os
 
-BASE = os.path.expanduser("~/hwp-tests")
-LOGS_DIR = os.path.join(BASE, "logs")
-RUNNER = os.path.join(BASE, "runs", "run_sequential.sh")
+REPO_ROOT = Path(os.environ.get("HWP_REPO_PATH") or Path(__file__).resolve().parent)
+LOGS_DIR = REPO_ROOT / "logs"
+RUNNER = REPO_ROOT / "runs" / "run_sequential.sh"
+DEFAULT_HOST = "0.0.0.0"
+DEFAULT_PORT = 8088
 
 def latest_chain_path() -> str:
-    cmd = f"ls -t {LOGS_DIR}/chain_hwp_*.jsonl | head -n 1"
-    return subprocess.check_output(["bash", "-lc", cmd]).decode().strip()
+    candidates = sorted(LOGS_DIR.glob("chain_hwp_*.jsonl"), key=lambda item: item.stat().st_mtime, reverse=True)
+    if not candidates:
+        raise FileNotFoundError(f"no chain logs found in {LOGS_DIR}")
+    return str(candidates[0])
 
 def last_round_inner_json(chain_path: str) -> dict:
-    last_line = subprocess.check_output(["bash", "-lc", f"tail -n 1 {chain_path}"]).decode()
-    outer = json.loads(last_line)
+    with open(chain_path, "r", encoding="utf-8") as handle:
+        lines = [line.strip() for line in handle if line.strip()]
+    if not lines:
+        raise ValueError(f"chain log is empty: {chain_path}")
+    outer = json.loads(lines[-1])
     inner_text = outer["payloads"][0]["text"]
     return json.loads(inner_text)
 
@@ -55,7 +64,7 @@ class Handler(BaseHTTPRequestHandler):
 
         try:
             # Run runner silently
-            subprocess.run(["bash", RUNNER, tmp_path], check=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+            subprocess.run(["bash", str(RUNNER), tmp_path], check=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
 
             chain = latest_chain_path()
             inner = last_round_inner_json(chain)
@@ -71,9 +80,20 @@ class Handler(BaseHTTPRequestHandler):
             except Exception:
                 pass
 
-def main():
-    server = HTTPServer(("0.0.0.0", 8088), Handler)
-    print("HWP server listening on :8088")
+def build_parser() -> argparse.ArgumentParser:
+    parser = argparse.ArgumentParser(
+        prog="python3 hwp_server.py",
+        description="Legacy HWP HTTP helper. Recommended entrypoints are `bash runs/run_sequential.sh` and `python3 -m hwp_protocol.cli`.",
+    )
+    parser.add_argument("--host", default=DEFAULT_HOST, help=f"Bind host (default: {DEFAULT_HOST})")
+    parser.add_argument("--port", type=int, default=DEFAULT_PORT, help=f"Bind port (default: {DEFAULT_PORT})")
+    return parser
+
+
+def main(argv: list[str] | None = None):
+    args = build_parser().parse_args(argv)
+    server = HTTPServer((args.host, args.port), Handler)
+    print(f"HWP server listening on {args.host}:{args.port}")
     server.serve_forever()
 
 if __name__ == "__main__":

@@ -48,11 +48,11 @@ def collect_blind_spot_messages(path: Path) -> list[VerificationMessage]:
         non_array = 0
         null_signals = 0
         checked = 0
-        for record in records:
-            value = record.get("blind_spot_signals")
-            if value is None and "blind_spot_signals" in record:
+        for record, inner in record_pairs:
+            value = record.get("blind_spot_signals", inner.get("blind_spot_signals"))
+            if value is None and ("blind_spot_signals" in record or "blind_spot_signals" in inner):
                 null_signals += 1
-            elif "blind_spot_signals" in record:
+            elif "blind_spot_signals" in record or "blind_spot_signals" in inner:
                 checked += 1
                 if not isinstance(value, list):
                     non_array += 1
@@ -66,7 +66,12 @@ def collect_blind_spot_messages(path: Path) -> list[VerificationMessage]:
     else:
         messages.append(VerificationMessage("WARN", "日志中未找到 blind_spot_signals 字段（字段为 OPTIONAL）"))
 
-    scores: list[Any] = [record["blind_spot_score"] for record in records if "blind_spot_score" in record]
+    scores: list[Any] = []
+    for record, inner in record_pairs:
+        if "blind_spot_score" in record:
+            scores.append(record["blind_spot_score"])
+        elif "blind_spot_score" in inner:
+            scores.append(inner["blind_spot_score"])
     if scores:
         messages.append(VerificationMessage("PASS", "日志包含 blind_spot_score 字段"))
         invalid_scores = []
@@ -96,7 +101,12 @@ def collect_blind_spot_messages(path: Path) -> list[VerificationMessage]:
         messages.append(VerificationMessage("WARN", "无法检查范围（无 blind_spot_score 数据）"))
         messages.append(VerificationMessage("WARN", "无法检查字段类型（无 blind_spot_score 数据）"))
 
-    reasons = [record["blind_spot_reason"] for record in records if "blind_spot_reason" in record]
+    reasons: list[Any] = []
+    for record, inner in record_pairs:
+        if "blind_spot_reason" in record:
+            reasons.append(record["blind_spot_reason"])
+        elif "blind_spot_reason" in inner:
+            reasons.append(inner["blind_spot_reason"])
     if reasons:
         messages.append(VerificationMessage("PASS", "日志包含 blind_spot_reason 字段"))
         if all(isinstance(reason, str) for reason in reasons):

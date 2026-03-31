@@ -16,7 +16,7 @@ source "$SCRIPT_DIR/lib_agent.sh"
 
 # ---- args ----
 usage() {
-  echo "用法: bash runs/run_sequential.sh [--config PATH] [--provider-type TYPE] [--provider-name NAME] [--agent-bin PATH] [--agent-cmd CMD] [--replay-chain PATH] inputs/probe.txt"
+  echo "用法: bash runs/run_sequential.sh [--config PATH] [--provider-type TYPE] [--provider-name NAME] [--agent-bin PATH] [--agent-cmd CMD] [--replay-chain PATH] [--dry-run] inputs/probe.txt"
 }
 
 parse_hwp_provider_args "$@"
@@ -24,7 +24,7 @@ if [ -n "${HWP_SHOW_HELP:-}" ]; then
   usage
   exit 0
 fi
-if [ "${HWP_INPUT_FILE:-}" = "" ]; then
+if [ -z "${HWP_DRY_RUN:-}" ] && [ "${HWP_INPUT_FILE:-}" = "" ]; then
   usage
   exit 1
 fi
@@ -32,6 +32,13 @@ INPUT_FILE="$HWP_INPUT_FILE"
 
 ROOT_FROM_SCRIPT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 resolve_hwp_provider_settings "$ROOT_FROM_SCRIPT"
+if [ -n "${HWP_DRY_RUN:-}" ]; then
+  print_hwp_provider_summary
+  validate_hwp_provider_setup
+  print_hwp_provider_warnings
+  echo "Dry run OK: provider configuration is ready."
+  exit 0
+fi
 
 if [ -z "${INPUT_FILE}" ]; then
   echo "错误：请指定输入文件路径"
@@ -50,12 +57,55 @@ PROMPT_FINGERPRINT="$(grep -m1 '^PROMPT_FINGERPRINT:' "$SPEC_PROMPT" | sed -E 's
 [ -z "${PROMPT_FINGERPRINT:-}" ] && PROMPT_FINGERPRINT="(missing)"
 
 ROUND_SLEEP_SEC="${HWP_ROUND_SLEEP_SEC:-2}"
+CHAIN_TIMEOUT_SEC="${HWP_CHAIN_TIMEOUT_SEC:-0}"
 ROUNDS_PER_CHAIN=8
 if ! awk -v x="$ROUND_SLEEP_SEC" 'BEGIN{exit !(x ~ /^[0-9]+([.][0-9]+)?$/)}'; then
   echo "错误：HWP_ROUND_SLEEP_SEC 必须是非负数字，当前值: $ROUND_SLEEP_SEC"
   exit 1
 fi
+if ! awk -v x="$CHAIN_TIMEOUT_SEC" 'BEGIN{exit !(x ~ /^[0-9]+([.][0-9]+)?$/)}'; then
+  echo "错误：HWP_CHAIN_TIMEOUT_SEC 必须是非负数字，当前值: $CHAIN_TIMEOUT_SEC"
+  exit 1
+fi
 mkdir -p "$LOG_DIR"
+
+now_epoch() {
+  python3 - <<'PY'
+import time
+print(time.time())
+PY
+}
+
+elapsed_sec() {
+  local start_ts="$1"
+  local end_ts="${2:-$(now_epoch)}"
+  awk -v start="$start_ts" -v end="$end_ts" 'BEGIN{printf "%.2f", (end - start)}'
+}
+
+sum_sec() {
+  local left="$1"
+  local right="$2"
+  awk -v left="$left" -v right="$right" 'BEGIN{printf "%.2f", (left + right)}'
+}
+
+max_sec() {
+  local left="$1"
+  local right="$2"
+  awk -v left="$left" -v right="$right" 'BEGIN{printf "%.2f", (left > right ? left : right)}'
+}
+
+avg_sec() {
+  local total="$1"
+  local count="$2"
+  awk -v total="$total" -v count="$count" 'BEGIN{printf "%.2f", (count > 0 ? total / count : 0)}'
+}
+
+timeout_exceeded() {
+  local start_ts="$1"
+  local timeout_sec="$2"
+  local now_ts="${3:-$(now_epoch)}"
+  awk -v start="$start_ts" -v timeout="$timeout_sec" -v now="$now_ts" 'BEGIN{exit !(timeout > 0 && (now - start) >= timeout)}'
+}
 
 enrich_v06_inner_json() {
   local inner_json="$1"
@@ -101,7 +151,7 @@ compute_mode() {
   local round="$1" is_probe="$2" pe="$3" pd="$4" pc="$5" pr="$6"
 
   if [ "$round" -eq 1 ]; then
-    if [ "$is_probe" = "1" ]; then echo "Rg1"; else echo "Rg0"; fi
+    echo "Rg0"
     return
   fi
 
@@ -146,9 +196,16 @@ while IFS= read -r line || [ -n "$line" ]; do
 
   session_id="hwp_$(date +%s)_$RANDOM"
   log_file="$LOG_DIR/chain_${session_id}.jsonl"
+  chain_start_ts="$(now_epoch)"
+  completed_rounds=0
+  total_round_sec="0.00"
+  max_round_sec="0.00"
 
   echo "开始链: ${session_id}，输入: ${line}" | tee -a "$LOG_DIR/run.log"
   echo "  PROMPT_FINGERPRINT: $PROMPT_FINGERPRINT" | tee -a "$LOG_DIR/run.log"
+  if f_gt "$CHAIN_TIMEOUT_SEC" "0"; then
+    echo "  CHAIN_TIMEOUT_SEC: $CHAIN_TIMEOUT_SEC" | tee -a "$LOG_DIR/run.log"
+  fi
 
   # baseline controller state reused by the v0.6 RC2 runner
   base_line="$line"
@@ -170,6 +227,13 @@ while IFS= read -r line || [ -n "$line" ]; do
   > "$log_file"
 
   for ((r=1; r<=ROUNDS_PER_CHAIN; r++)); do
+    if timeout_exceeded "$chain_start_ts" "$CHAIN_TIMEOUT_SEC"; then
+      chain_elapsed="$(elapsed_sec "$chain_start_ts")"
+      echo "TIMEOUT: chain ${session_id} exceeded HWP_CHAIN_TIMEOUT_SEC=${CHAIN_TIMEOUT_SEC}s before round ${r} (elapsed=${chain_elapsed}s)" | tee -a "$LOG_DIR/run.log"
+      exit 1
+    fi
+
+    round_start_ts="$(now_epoch)"
     echo "  链 ${session_id} 第 ${r} 轮" | tee -a "$LOG_DIR/run.log"
 
     mode="$(compute_mode "$r" "$is_probe" "$prev_entropy" "$prev_drift" "$prev_collapse" "$prev_recovery")"
@@ -267,6 +331,18 @@ Now run Round $r."
       prev_drift="1.00"
       prev_collapse="true"
       prev_recovery="true"
+      round_elapsed="$(elapsed_sec "$round_start_ts")"
+      chain_elapsed="$(elapsed_sec "$chain_start_ts")"
+      completed_rounds=$((completed_rounds + 1))
+      total_round_sec="$(sum_sec "$total_round_sec" "$round_elapsed")"
+      max_round_sec="$(max_sec "$max_round_sec" "$round_elapsed")"
+      echo "    [timing] round_sec=${round_elapsed} chain_sec=${chain_elapsed}" | tee -a "$LOG_DIR/run.log"
+
+      if timeout_exceeded "$chain_start_ts" "$CHAIN_TIMEOUT_SEC"; then
+        echo "TIMEOUT: chain ${session_id} exceeded HWP_CHAIN_TIMEOUT_SEC=${CHAIN_TIMEOUT_SEC}s after round ${r} (elapsed=${chain_elapsed}s)" | tee -a "$LOG_DIR/run.log"
+        echo "  [summary] session_id=${session_id} rounds_completed=${completed_rounds} round_avg_sec=$(avg_sec "$total_round_sec" "$completed_rounds") round_max_sec=${max_round_sec} chain_sec=${chain_elapsed}" | tee -a "$LOG_DIR/run.log"
+        exit 1
+      fi
 
       sleep "$ROUND_SLEEP_SEC"
       continue
@@ -287,11 +363,26 @@ Now run Round $r."
     prev_drift=$(echo "$inner_json" | JQ_SAFE -r '.drift_rate // 0.0')
     prev_collapse=$(echo "$inner_json" | JQ_SAFE -r '.collapse_detected // false')
     prev_recovery=$(echo "$inner_json" | JQ_SAFE -r '.recovery_applied // false')
+    round_elapsed="$(elapsed_sec "$round_start_ts")"
+    chain_elapsed="$(elapsed_sec "$chain_start_ts")"
+    completed_rounds=$((completed_rounds + 1))
+    total_round_sec="$(sum_sec "$total_round_sec" "$round_elapsed")"
+    max_round_sec="$(max_sec "$max_round_sec" "$round_elapsed")"
+    echo "    [timing] round_sec=${round_elapsed} chain_sec=${chain_elapsed}" | tee -a "$LOG_DIR/run.log"
+
+    if timeout_exceeded "$chain_start_ts" "$CHAIN_TIMEOUT_SEC"; then
+      echo "TIMEOUT: chain ${session_id} exceeded HWP_CHAIN_TIMEOUT_SEC=${CHAIN_TIMEOUT_SEC}s after round ${r} (elapsed=${chain_elapsed}s)" | tee -a "$LOG_DIR/run.log"
+      echo "  [summary] session_id=${session_id} rounds_completed=${completed_rounds} round_avg_sec=$(avg_sec "$total_round_sec" "$completed_rounds") round_max_sec=${max_round_sec} chain_sec=${chain_elapsed}" | tee -a "$LOG_DIR/run.log"
+      exit 1
+    fi
 
     sleep "$ROUND_SLEEP_SEC"
   done
 
-  echo "完成链: $session_id" | tee -a "$LOG_DIR/run.log"
+  chain_elapsed="$(elapsed_sec "$chain_start_ts")"
+  round_avg_sec="$(avg_sec "$total_round_sec" "$completed_rounds")"
+  echo "  [summary] session_id=${session_id} rounds_completed=${completed_rounds} round_avg_sec=${round_avg_sec} round_max_sec=${max_round_sec} chain_sec=${chain_elapsed}" | tee -a "$LOG_DIR/run.log"
+  echo "完成链: $session_id (rounds=${ROUNDS_PER_CHAIN}, elapsed_sec=${chain_elapsed})" | tee -a "$LOG_DIR/run.log"
 done < "$INPUT_FILE"
 
 echo "输入文件 $INPUT_FILE 处理完成。" | tee -a "$LOG_DIR/run.log"

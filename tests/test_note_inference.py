@@ -1,5 +1,7 @@
 import json
+import io
 import unittest
+from contextlib import redirect_stdout
 from unittest.mock import patch
 
 from hwp_protocol.cli import main as cli_main
@@ -64,4 +66,5 @@ class NoteInferenceTests(unittest.TestCase):
             json.dumps(SAMPLE_INPUT, ensure_ascii=False),
         ]
         with patch("sys.argv", argv):
-            self.assertEqual(cli_main(), 0)
+            with redirect_stdout(io.StringIO()):
+                self.assertEqual(cli_main(), 0)

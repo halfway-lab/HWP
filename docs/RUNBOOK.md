@@ -24,6 +24,14 @@ bash runs/setup_provider.sh --non-interactive --provider deepseek --api-key YOUR
 
 ```bash
 bash runs/run_sequential.sh inputs/probe.txt
+HWP_CHAIN_TIMEOUT_SEC=180 bash runs/run_sequential.sh inputs/probe.txt
+```
+
+## Validate Provider Setup Without Network
+
+```bash
+bash runs/run_sequential.sh --dry-run
+bash runs/run_sequential.sh --dry-run --config /path/to/provider.env
 ```
 
 ## Run Replay Benchmark Baseline
@@ -50,6 +58,12 @@ bash runs/verify_v06_all.sh <logs_dir>
   - `logs/`
 - Benchmark reports:
   - `reports/benchmarks/<timestamp>/`
+
+## Summarize Recent Chain Timing
+
+```bash
+python3 runs/report_timing.py logs/run.log reports/timing_summary.md 10
+```
 
 ## Local-Only Sensitive Files
 

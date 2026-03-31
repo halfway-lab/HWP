@@ -42,13 +42,28 @@ SYSTEM_PROMPT = (
 )
 
 
+def resolve_base_url(provider_name: str) -> str:
+    explicit = first_env("HWP_LLM_BASE_URL", "OPENAI_BASE_URL", default="").rstrip("/")
+    if explicit:
+        return explicit
+
+    normalized = (provider_name or "openai").lower()
+    if normalized in PROVIDER_BASE_URLS:
+        return PROVIDER_BASE_URLS[normalized]
+    if normalized == "openai":
+        return PROVIDER_BASE_URLS["openai"]
+
+    raise RuntimeError(
+        "missing required environment variable: HWP_LLM_BASE_URL (required when HWP_PROVIDER_NAME is custom or unknown)"
+    )
+
+
 def main() -> int:
     try:
         api_key = require_first_env("HWP_LLM_API_KEY", "OPENAI_API_KEY")
         model = require_first_env("HWP_LLM_MODEL", "OPENAI_MODEL")
         provider_name = first_env("HWP_PROVIDER_NAME", default="openai").lower()
-        default_base_url = PROVIDER_BASE_URLS.get(provider_name, "https://api.openai.com/v1")
-        base_url = first_env("HWP_LLM_BASE_URL", "OPENAI_BASE_URL", default=default_base_url).rstrip("/")
+        base_url = resolve_base_url(provider_name)
         temperature = float(first_env("HWP_LLM_TEMPERATURE", "HWP_OPENAI_TEMPERATURE", default="0.7"))
         timeout = int(first_env("HWP_LLM_TIMEOUT_SEC", "HWP_OPENAI_TIMEOUT_SEC", default="120"))
 
