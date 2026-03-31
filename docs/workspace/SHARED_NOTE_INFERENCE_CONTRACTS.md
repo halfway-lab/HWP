@@ -12,6 +12,11 @@ These contracts are first implemented in:
 
 - `/Users/mac/Documents/Halfway-Lab/packages/reading-note/src/types.ts`
 
+Working location rule:
+
+- the active package home is `/Users/mac/Documents/Halfway-Lab/packages/reading-note`
+- any older `protocol/HWP/packages/reading-note` copy should be treated as retirement-era history, not the live package location
+
 ## Contract Split
 
 ### Explicit Layer
@@ -81,6 +86,10 @@ Current status:
   - `python3 -m hwp_protocol.cli note-infer <input_json>`
 - this runtime adapter is intentionally minimal and deterministic
 - it is suitable as a first integration layer, not yet a final inference engine
+
+Location note:
+
+- contract evolution should continue from the root package home under `Halfway-Lab/packages/reading-note`
 
 ## Next Recommended Step
 

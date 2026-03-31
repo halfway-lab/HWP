@@ -12,6 +12,7 @@ Current staged layout:
 /Users/mac/Documents/Halfway-Lab
   /apps
     /half-note
+    /question-expander
   /protocol
     /HWP
   /packages
@@ -133,6 +134,33 @@ Embedded protocol cleanup status:
   - `/Users/mac/Documents/Half Note/_protocol-replicas/my-app-HWP-34d29e1`
 - archived snapshot commit:
   - `34d29e1`
+
+### Question Expander App
+
+- staged location:
+  - `/Users/mac/Documents/Halfway-Lab/apps/question-expander`
+- migration mode:
+  - product app home added under the root `apps/` directory for continued app development
+- original demo counterpart still preserved at:
+  - `/Users/mac/Documents/Halfway-Lab/demos/halfway-demos/demos/question-expander`
+
+Validation completed in the staged location:
+
+- `npm install --prefer-offline --no-audit --no-fund`
+- `npm run build`
+- `npm run test:run`
+
+Validation result:
+
+- install passed
+- build passed
+- test passed
+
+Current app notes:
+
+- default local mode is mock-driven
+- API-backed mode can point at an external adapter
+- this app should be treated as the product-side home for question expansion, not as a replacement for the demo repo
 
 ### Canonical Protocol Staging
 

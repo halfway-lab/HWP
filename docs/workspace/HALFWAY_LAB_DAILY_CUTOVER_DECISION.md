@@ -1,11 +1,18 @@
 # Halfway-Lab Daily Cutover Decision
 
+Historical note:
+
+- this document records the cutover decision at the time it was made
+- for current daily paths and project status, prefer the root workspace docs under `/Users/mac/Documents/Halfway-Lab`
+
 ## Decision
 
 From the current migration stage onward, the preferred daily working entry points should be:
 
 - app work:
   - `/Users/mac/Documents/Halfway-Lab/apps/half-note`
+- question-expander app work:
+  - `/Users/mac/Documents/Halfway-Lab/apps/question-expander`
 - package work:
   - `/Users/mac/Documents/Halfway-Lab/packages/reading-note`
 - demo work:
@@ -22,6 +29,7 @@ This means the workspace has now fully cut over for daily use, including protoco
 Use `Halfway-Lab` first when doing:
 
 - Half Note UI/app work
+- Question Expander app work
 - reading-note package work
 - demo work
 
@@ -42,6 +50,7 @@ Old `/Users/mac/Documents/HWP` should now be treated as a fallback canonical cop
 ### Preferred Daily Paths
 
 - `/Users/mac/Documents/Halfway-Lab/apps/half-note`
+- `/Users/mac/Documents/Halfway-Lab/apps/question-expander`
 - `/Users/mac/Documents/Halfway-Lab/packages/reading-note`
 - `/Users/mac/Documents/Halfway-Lab/demos/halfway-demos`
 - `/Users/mac/Documents/Halfway-Lab/protocol/HWP`
@@ -79,9 +88,10 @@ This full workspace cutover is justified because:
 Starting now:
 
 1. begin new app work from `Halfway-Lab/apps/half-note`
-2. begin new package work from `Halfway-Lab/packages/reading-note`
-3. begin new demo work from `Halfway-Lab/demos/halfway-demos`
-4. begin new protocol-core work from `Halfway-Lab/protocol/HWP`
+2. begin new question-expander app work from `Halfway-Lab/apps/question-expander`
+3. begin new package work from `Halfway-Lab/packages/reading-note`
+4. begin new demo work from `Halfway-Lab/demos/halfway-demos`
+5. begin new protocol-core work from `Halfway-Lab/protocol/HWP`
 
 If old paths are used, treat them as compatibility paths or rollback paths, not preferred daily homes.
 

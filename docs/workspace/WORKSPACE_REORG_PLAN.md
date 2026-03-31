@@ -1,5 +1,10 @@
 # Workspace Reorganization Plan
 
+Historical note:
+
+- this plan records the migration framing and original starting state
+- the active workspace has already cut over; treat this file as planning history plus high-level rationale
+
 ## Goal
 
 Create a single, predictable workspace layout for the four active project areas under `/Users/mac/Documents`, while keeping git history intact and avoiding a risky all-at-once migration.
@@ -87,6 +92,7 @@ The planned target layout is now the active working layout:
     /halfway-demos
   /apps
     /half-note
+    /question-expander
   /docs
     /workspace
 ```

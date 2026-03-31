@@ -1,5 +1,10 @@
 # Phased Migration Checklist
 
+Historical note:
+
+- this checklist preserves the phased migration process and original move order
+- items below may remain as completed migration history even when the current workspace has already moved past that phase
+
 ## Goal
 
 Move from the scattered `/Users/mac/Documents` layout into a cleaner workspace structure without losing git history, breaking path assumptions, or confusing protocol ownership.
@@ -16,6 +21,7 @@ Target workspace:
     /halfway-demos
   /apps
     /half-note
+    /question-expander
   /docs
     /workspace
 ```
@@ -24,6 +30,7 @@ Current status:
 
 - this target layout now exists and is the preferred daily workspace
 - canonical protocol path is now `/Users/mac/Documents/Halfway-Lab/protocol/HWP`
+- `apps/question-expander` now exists as a separate product app under the root `apps/` directory
 - old `/Users/mac/Documents/HWP` is now a fallback canonical copy during observation
 
 ## Before Any Move

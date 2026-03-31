@@ -1,5 +1,10 @@
 # Legacy Path Retirement Strategy
 
+Historical note:
+
+- this file tracks old-path observation and retirement strategy
+- it intentionally preserves legacy paths because the point is to explain which old locations should no longer be used for new daily work
+
 ## Goal
 
 Define which old workspace paths can now move into backup/retirement observation mode, and which still need to stay active.
@@ -36,6 +41,11 @@ Recommended behavior:
 
 - stop starting new daily work there
 - keep them available as rollback/backup paths during an observation period
+
+Current workspace reminder:
+
+- product app work now splits between `Halfway-Lab/apps/half-note` and `Halfway-Lab/apps/question-expander`
+- demo/prototype work belongs in `Halfway-Lab/demos/halfway-demos`
 
 ### Path That Has Just Changed Status
 

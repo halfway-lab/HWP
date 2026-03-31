@@ -259,6 +259,10 @@ Current preferred paths:
 
 - `reading-note`
   - `/Users/mac/Documents/Halfway-Lab/packages/reading-note`
+- location rule:
+  - treat the root `packages/` directory as the live package-management area
+  - do not treat `protocol/HWP/packages/reading-note` as a parallel active package home
+  - `/Users/mac/Documents/Halfway-Lab/packages/reading-note`
 - `HWP`
   - `/Users/mac/Documents/Halfway-Lab/protocol/HWP`
 - `Half Note`
