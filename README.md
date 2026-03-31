@@ -34,8 +34,8 @@
 Within the current Halfway-Lab workspace:
 
 - this repository is the canonical home for HWP protocol-core code
-- reusable packages now live under `/Users/mac/Documents/Halfway-Lab/packages`
-- active app and demo code should not reintroduce package source back into `protocol/HWP/packages`
+- reusable packages such as `reading-note` now live in their own dedicated repositories
+- active app and demo code should not reintroduce package source back into this protocol repo
 
 HWP 协议的核心是 **动态控制器** 与 `RHYTHM_HINT` 机制。它通过以下方式实现“非收敛型生成”：
 

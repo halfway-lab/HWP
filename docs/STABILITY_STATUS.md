@@ -13,6 +13,7 @@ The protocol/runtime path is functioning end to end:
 - replay execution is stable
 - live provider execution has been verified on the real adapter + runner path
 - runner observability now includes dry-run validation, chain timeout, per-round timing, and per-chain timing summaries
+- multi-provider smoke now distinguishes real completed runs from placeholder-config providers via explicit skip status
 
 ## What Is Stable
 
@@ -33,6 +34,7 @@ The protocol/runtime path is functioning end to end:
 - Live provider latency in later rounds of longer chains
 - Provider-to-provider stability differences
 - Higher-concurrency execution behavior
+- broader real multi-provider coverage beyond the currently configured live provider
 
 These are currently performance/stability observation items, not known protocol-correctness failures.
 
