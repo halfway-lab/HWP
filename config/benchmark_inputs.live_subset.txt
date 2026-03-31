@@ -1,0 +1,3 @@
+inputs/probe.txt
+inputs/natural.txt
+inputs/mixed.txt
