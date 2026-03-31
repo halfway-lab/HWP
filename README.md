@@ -562,6 +562,10 @@ http://127.0.0.1:8088/api/multi-provider/latest
 /api/multi-provider/latest?report=multi_20260331T141500
 ```
 
+如果你需要这些输出的正式字段说明，请参考：
+
+- `docs/DATA_CONTRACTS.md`
+
 如果你想直接使用统一 Python CLI，也可以：
   ```bash
   python3 -m hwp_protocol.cli fixture-verify blind_spot valid

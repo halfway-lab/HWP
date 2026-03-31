@@ -68,6 +68,12 @@ Optional query params:
 /api/multi-provider/latest?report=multi_20260331T141500
 ```
 
+Formal field-level contract reference:
+
+```text
+docs/DATA_CONTRACTS.md
+```
+
 ## Validate Provider Setup Without Network
 
 ```bash
