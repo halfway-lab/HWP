@@ -31,6 +31,7 @@ Current status:
 - this target layout now exists and is the preferred daily workspace
 - canonical protocol path is now `/Users/mac/Documents/Halfway-Lab/protocol/HWP`
 - `apps/question-expander` now exists as a separate product app under the root `apps/` directory
+- package work has since continued in a dedicated `reading-note` repository rather than under this protocol repo
 - old `/Users/mac/Documents/HWP` is now a fallback canonical copy during observation
 
 ## Before Any Move
@@ -134,5 +135,5 @@ Post-move checklist:
 
 Current staged migration status:
 
-- preferred daily path has already cut over to `/Users/mac/Documents/Halfway-Lab/packages/reading-note`
+- the staged workspace path was used during migration, but package ownership has since moved to the dedicated `reading-note` repository
 - old package path is now fallback-only

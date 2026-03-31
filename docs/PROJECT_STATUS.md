@@ -114,5 +114,5 @@
 ## Notes
 
 - Treat this repo as the only protocol source of truth.
-- Active reusable packages now live under `/Users/mac/Documents/Halfway-Lab/packages`.
+- Reusable packages such as `reading-note` now live in their own dedicated repositories, not inside this protocol repo.
 - Downstream copies should not become long-term parallel protocol sources.

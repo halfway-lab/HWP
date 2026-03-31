@@ -14,7 +14,7 @@ From the current migration stage onward, the preferred daily working entry point
 - question-expander app work:
   - `/Users/mac/Documents/Halfway-Lab/apps/question-expander`
 - package work:
-  - `/Users/mac/Documents/Halfway-Lab/packages/reading-note`
+  - dedicated `reading-note` repository
 - demo work:
   - `/Users/mac/Documents/Halfway-Lab/demos/halfway-demos`
 
@@ -51,7 +51,7 @@ Old `/Users/mac/Documents/HWP` should now be treated as a fallback canonical cop
 
 - `/Users/mac/Documents/Halfway-Lab/apps/half-note`
 - `/Users/mac/Documents/Halfway-Lab/apps/question-expander`
-- `/Users/mac/Documents/Halfway-Lab/packages/reading-note`
+- dedicated `reading-note` repository
 - `/Users/mac/Documents/Halfway-Lab/demos/halfway-demos`
 - `/Users/mac/Documents/Halfway-Lab/protocol/HWP`
 
@@ -89,7 +89,7 @@ Starting now:
 
 1. begin new app work from `Halfway-Lab/apps/half-note`
 2. begin new question-expander app work from `Halfway-Lab/apps/question-expander`
-3. begin new package work from `Halfway-Lab/packages/reading-note`
+3. begin new package work from the dedicated `reading-note` repository
 4. begin new demo work from `Halfway-Lab/demos/halfway-demos`
 5. begin new protocol-core work from `Halfway-Lab/protocol/HWP`
 

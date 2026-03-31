@@ -38,12 +38,12 @@ Current reality after cutover:
 ### Packages
 
 - Original path: `/Users/mac/Documents/HWP Packages`
-- Current preferred path: `/Users/mac/Documents/Halfway-Lab/packages/reading-note`
+- Migration-stage preferred path: `/Users/mac/Documents/Halfway-Lab/packages/reading-note`
 - Git: no workspace repo for the old package area
 - Current child:
   - `reading-note`
 - Notes:
-  - `reading-note` now has its preferred home under `Halfway-Lab/packages`
+  - `reading-note` later moved beyond the workspace staging path into its own dedicated repository
   - the old package workspace is now fallback-only
 
 ### Demo

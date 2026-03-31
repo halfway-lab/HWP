@@ -21,7 +21,7 @@ Define which old workspace paths can now move into backup/retirement observation
 
 | Path | Current Status | Why | Suggested Holding Pattern |
 | --- | --- | --- | --- |
-| `/Users/mac/Documents/HWP Packages` | `ready_for_backup_observation` | `reading-note` has a validated staged home under `Halfway-Lab/packages/reading-note` | keep as fallback/backup during observation, do not start new package work here |
+| `/Users/mac/Documents/HWP Packages` | `ready_for_backup_observation` | `reading-note` has moved through the workspace migration stage and now belongs in its own dedicated repository | keep as fallback/backup during observation, do not start new package work here |
 | `/Users/mac/Documents/halfway-demos` | `ready_for_backup_observation` | staged demo repo under `Halfway-Lab/demos/halfway-demos` has passed install/build | keep as fallback/backup during observation, do not start new demo work here |
 | `/Users/mac/Documents/Half Note/my-app` | `ready_for_backup_observation` | staged app copy under `Halfway-Lab/apps/half-note` has passed install/build; embedded `HWP/` has been removed from active tree | keep as fallback/rollback path during observation, avoid treating as preferred daily app path |
 | `/Users/mac/Documents/Half Note/hwp-protocol` | `transitional_replica` | still a local protocol replica; not preferred, and kept only while the new canonical path settles | keep temporarily, do not treat as editable peer source, deprecate after protocol cutover settles |

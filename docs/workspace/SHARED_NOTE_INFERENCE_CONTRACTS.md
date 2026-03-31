@@ -10,12 +10,12 @@ Define the shared data-contract layer between:
 
 These contracts are first implemented in:
 
-- `/Users/mac/Documents/Halfway-Lab/packages/reading-note/src/types.ts`
+- the dedicated `reading-note` repository contract types
 
 Working location rule:
 
-- the active package home is `/Users/mac/Documents/Halfway-Lab/packages/reading-note`
-- any older `protocol/HWP/packages/reading-note` copy should be treated as retirement-era history, not the live package location
+- `reading-note` should now be treated as an external dedicated repository, not a package living under this protocol repo
+- any older workspace-local `packages/reading-note` copy should be treated as migration-era history, not the live package location
 
 ## Contract Split
 
@@ -76,8 +76,7 @@ The architecture rule is:
 
 Current status:
 
-- the shared TypeScript-facing contract draft now exists in:
-  - `/Users/mac/Documents/Halfway-Lab/packages/reading-note/src/types.ts`
+- the shared TypeScript-facing contract draft now lives in the dedicated `reading-note` repository
 - `reading-note` now exposes:
   - `buildReadingNoteGraph`
   - `buildHwpNoteAnalysisInput`
@@ -89,7 +88,7 @@ Current status:
 
 Location note:
 
-- contract evolution should continue from the root package home under `Halfway-Lab/packages/reading-note`
+- contract evolution should continue in the dedicated `reading-note` repository, not inside this protocol repo
 
 ## Next Recommended Step
 

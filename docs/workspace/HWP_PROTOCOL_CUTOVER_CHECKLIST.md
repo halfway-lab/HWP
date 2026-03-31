@@ -34,7 +34,7 @@ That makes it the highest-risk relocation in the whole workspace plan.
 
 Already true:
 
-- `reading-note` has a validated staged home under `Halfway-Lab/packages/reading-note`
+- `reading-note` completed the workspace migration stage and now continues from its own dedicated repository
 - `halfway-demos` has a validated staged home under `Halfway-Lab/demos/halfway-demos`
 - `half-note` has a validated staged home under `Halfway-Lab/apps/half-note`
 - the embedded app-side `my-app/HWP` replica has been removed from the active app tree
@@ -56,7 +56,7 @@ Still true after cutover:
 Confirm that daily work can already start from:
 
 - `Halfway-Lab/apps/half-note`
-- `Halfway-Lab/packages/reading-note`
+- the dedicated `reading-note` repository
 - `Halfway-Lab/demos/halfway-demos`
 
 Desired condition:

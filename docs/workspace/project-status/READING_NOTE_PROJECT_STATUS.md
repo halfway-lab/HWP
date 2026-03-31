@@ -4,7 +4,8 @@ Historical snapshot note:
 
 - this file records the old package-path snapshot from the migration period
 - it should not be treated as the current source for active package status
-- for the current maintained package status, prefer `/Users/mac/Documents/Halfway-Lab/packages/reading-note/docs/PROJECT_STATUS.md`
+- `reading-note` now belongs in its own dedicated repository rather than under this protocol repo or workspace snapshot tree
+- for the current maintained package status, prefer the dedicated `reading-note` repository docs
 - for workspace-wide context, prefer `/Users/mac/Documents/Halfway-Lab/WORKSPACE_STATUS.md`
 
 ## Basic Info
@@ -106,11 +107,10 @@ Historical snapshot note:
 ## Notes
 
 - This is a strong candidate for the first low-risk migration batch.
-- A staged migrated copy now exists at:
-  - `/Users/mac/Documents/Halfway-Lab/packages/reading-note`
+- The package has since moved out to its own dedicated repository.
 - Validation in the new location succeeded with:
   - `npm install --prefer-offline --no-audit --no-fund`
   - `npm run build`
   - `npm test`
 - Original path is still being kept temporarily as fallback until downstream references are updated.
-- The active package home is now `/Users/mac/Documents/Halfway-Lab/packages/reading-note`.
+- Do not treat any path inside this HWP repo as the active package home.
