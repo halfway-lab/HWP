@@ -26,6 +26,10 @@ def load_context(path: Path) -> dict[str, str]:
     return context
 
 
+def load_provider_statuses(multi_report_dir: Path) -> list[dict[str, str]]:
+    return load_tsv(multi_report_dir / "provider_status.tsv")
+
+
 def load_provider_results(multi_report_dir: Path) -> dict[str, dict[str, Any]]:
     provider_data: dict[str, dict[str, Any]] = {}
 
@@ -119,6 +123,24 @@ def generate_comparison_table(provider_data: dict[str, dict[str, Any]]) -> list[
             f"{score_data['max_chain_sec']:.2f} |"
         )
 
+    return lines
+
+
+def generate_provider_status_table(status_rows: list[dict[str, str]]) -> list[str]:
+    if not status_rows:
+        return []
+
+    lines = [
+        "## Provider Execution Status",
+        "",
+        "| Provider | Status | Reason | Env Path | Report Dir |",
+        "|----------|--------|--------|----------|------------|",
+    ]
+    for row in status_rows:
+        lines.append(
+            f"| {row.get('provider', '')} | {row.get('status', '')} | {row.get('reason', '')} | {row.get('env_path', '')} | {row.get('report_dir', '')} |"
+        )
+    lines.append("")
     return lines
 
 
@@ -243,8 +265,9 @@ def main() -> int:
     
     # 加载数据
     provider_data = load_provider_results(multi_report_dir)
+    status_rows = load_provider_statuses(multi_report_dir)
     
-    if not provider_data:
+    if not provider_data and not status_rows:
         print("Warning: No provider data found", file=sys.stderr)
         output_path.write_text("# Multi-Provider Comparison\n\nNo data available.\n", encoding="utf-8")
         return 0
@@ -253,13 +276,15 @@ def main() -> int:
     lines = [
         "# HWP Multi-Provider Benchmark Overview",
         "",
-        f"**Total Providers**: {len(provider_data)}",
+        f"**Total Providers With Results**: {len(provider_data)}",
         "",
     ]
-    
-    lines.extend(generate_comparison_table(provider_data))
-    lines.extend(generate_benchmark_breakdown(provider_data))
-    lines.extend(generate_recommendations(provider_data))
+
+    lines.extend(generate_provider_status_table(status_rows))
+    if provider_data:
+        lines.extend(generate_comparison_table(provider_data))
+        lines.extend(generate_benchmark_breakdown(provider_data))
+        lines.extend(generate_recommendations(provider_data))
     
     lines.extend([
         "",

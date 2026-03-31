@@ -6,6 +6,7 @@ from runs.report_multi_provider import (
     calculate_provider_score,
     generate_benchmark_breakdown,
     generate_comparison_table,
+    generate_provider_status_table,
     load_provider_results,
 )
 
@@ -66,6 +67,24 @@ class MultiProviderReportTests(unittest.TestCase):
         breakdown = "\n".join(generate_benchmark_breakdown(provider_data))
         self.assertIn("| Provider | Source | Score | Run | Full Pass | Timing | Avg Chain Sec | Max Chain Sec |", comparison)
         self.assertIn("| deepseek | pass | pass | 12 | 11.37 | 11.37 |  |", breakdown)
+
+    def test_generate_provider_status_table_includes_skipped_rows(self) -> None:
+        table = "\n".join(
+            generate_provider_status_table(
+                [
+                    {
+                        "provider": "openrouter",
+                        "status": "skipped_placeholder",
+                        "reason": "placeholder_api_key",
+                        "env_path": "config/provider.openrouter.env.example",
+                        "report_dir": "/tmp/openrouter",
+                    }
+                ]
+            )
+        )
+        self.assertIn("## Provider Execution Status", table)
+        self.assertIn("skipped_placeholder", table)
+        self.assertIn("placeholder_api_key", table)
 
 
 if __name__ == "__main__":
