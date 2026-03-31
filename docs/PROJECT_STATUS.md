@@ -31,6 +31,7 @@
 - Out-of-scope items:
   - end-user app UX
   - product-specific frontends
+  - active reusable package ownership
 - Current maturity:
   - active development
 
@@ -113,4 +114,5 @@
 ## Notes
 
 - Treat this repo as the only protocol source of truth.
+- Active reusable packages now live under `/Users/mac/Documents/Halfway-Lab/packages`.
 - Downstream copies should not become long-term parallel protocol sources.
