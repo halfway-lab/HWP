@@ -6,15 +6,20 @@ workflows may still reference it.
 """
 
 import argparse
+import csv
 from http.server import BaseHTTPRequestHandler, HTTPServer
 import json
 from pathlib import Path
 import subprocess
 import tempfile
 import os
+from html import escape
+
+from runs.report_multi_provider import calculate_provider_score, load_provider_results
 
 REPO_ROOT = Path(os.environ.get("HWP_REPO_PATH") or Path(__file__).resolve().parent)
 LOGS_DIR = REPO_ROOT / "logs"
+REPORTS_DIR = REPO_ROOT / "reports" / "benchmarks"
 RUNNER = REPO_ROOT / "runs" / "run_sequential.sh"
 DEFAULT_HOST = "0.0.0.0"
 DEFAULT_PORT = 8088
@@ -34,6 +39,338 @@ def last_round_inner_json(chain_path: str) -> dict:
     inner_text = outer["payloads"][0]["text"]
     return json.loads(inner_text)
 
+
+def latest_benchmark_report_dir() -> Path | None:
+    candidates = sorted(
+        [path for path in REPORTS_DIR.glob("20*") if path.is_dir()],
+        key=lambda item: item.stat().st_mtime,
+        reverse=True,
+    )
+    return candidates[0] if candidates else None
+
+
+def latest_multi_provider_report_dir() -> Path | None:
+    candidates = sorted(
+        [path for path in REPORTS_DIR.glob("multi_*") if path.is_dir()],
+        key=lambda item: item.stat().st_mtime,
+        reverse=True,
+    )
+    return candidates[0] if candidates else None
+
+
+def load_key_value_file(path: Path) -> dict[str, str]:
+    data: dict[str, str] = {}
+    if not path.exists():
+        return data
+    for raw_line in path.read_text(encoding="utf-8").splitlines():
+        if "=" not in raw_line:
+            continue
+        key, value = raw_line.split("=", 1)
+        data[key.strip()] = value.strip()
+    return data
+
+
+def load_tsv_rows(path: Path) -> list[dict[str, str]]:
+    if not path.exists():
+        return []
+    with path.open(newline="", encoding="utf-8") as handle:
+        return list(csv.DictReader(handle, delimiter="\t"))
+
+
+def load_chain_rounds(chain_path: str) -> list[dict]:
+    rounds: list[dict] = []
+    with open(chain_path, "r", encoding="utf-8") as handle:
+        for raw_line in handle:
+            line = raw_line.strip()
+            if not line:
+                continue
+            outer = json.loads(line)
+            inner_text = outer.get("payloads", [{}])[0].get("text", "{}")
+            try:
+                inner = json.loads(inner_text)
+            except json.JSONDecodeError:
+                inner = {}
+            speed = inner.get("speed_metrics") or {}
+            rounds.append(
+                {
+                    "round": inner.get("round", ""),
+                    "mode": speed.get("mode", ""),
+                    "continuity_score": inner.get("continuity_score", ""),
+                    "blind_spot_score": inner.get("blind_spot_score", ""),
+                    "collapse_detected": inner.get("collapse_detected", ""),
+                    "recovery_applied": inner.get("recovery_applied", ""),
+                }
+            )
+    return rounds
+
+
+def load_latest_benchmark_snapshot() -> dict:
+    report_dir = latest_benchmark_report_dir()
+    if report_dir is None:
+        return {}
+    return {
+        "report_dir": str(report_dir),
+        "context": load_key_value_file(report_dir / "context.txt"),
+        "overview_rows": load_tsv_rows(report_dir / "overview.tsv"),
+    }
+
+
+def load_latest_multi_provider_snapshot() -> dict:
+    report_dir = latest_multi_provider_report_dir()
+    if report_dir is None:
+        return {}
+
+    provider_data = load_provider_results(report_dir)
+    providers = []
+    for name, payload in sorted(provider_data.items()):
+        score = calculate_provider_score(payload["rows"])
+        providers.append(
+            {
+                "provider": name,
+                "source": "overview.tsv" if payload.get("has_overview") else "results.tsv",
+                "run_pass": f"{score['run_pass']}/{score['total']}",
+                "full_pass": f"{score['verifier_pass']}/{score['total']}",
+                "timing": f"{score['timing_coverage']}/{score['total']}",
+                "score_percent": f"{score['percentage']:.1f}",
+                "avg_chain_sec": f"{score['avg_chain_sec']:.2f}",
+                "max_chain_sec": f"{score['max_chain_sec']:.2f}",
+            }
+        )
+    return {
+        "report_dir": str(report_dir),
+        "providers": providers,
+    }
+
+
+def dashboard_snapshot() -> dict:
+    snapshot: dict[str, object] = {
+        "repo_root": str(REPO_ROOT),
+        "latest_chain": None,
+        "latest_round": None,
+        "chain_rounds": [],
+        "benchmark": load_latest_benchmark_snapshot(),
+        "multi_provider": load_latest_multi_provider_snapshot(),
+    }
+    try:
+        chain_path = latest_chain_path()
+    except FileNotFoundError:
+        return snapshot
+
+    rounds = load_chain_rounds(chain_path)
+    snapshot["latest_chain"] = chain_path
+    snapshot["chain_rounds"] = rounds
+    snapshot["latest_round"] = rounds[-1] if rounds else None
+    return snapshot
+
+
+def render_table(headers: list[str], rows: list[list[str]]) -> str:
+    if not rows:
+        return "<p class='empty'>No data.</p>"
+    head = "".join(f"<th>{escape(item)}</th>" for item in headers)
+    body = []
+    for row in rows:
+        cells = "".join(f"<td>{escape(item)}</td>" for item in row)
+        body.append(f"<tr>{cells}</tr>")
+    return f"<table><thead><tr>{head}</tr></thead><tbody>{''.join(body)}</tbody></table>"
+
+
+def render_dashboard_html(snapshot: dict) -> str:
+    benchmark = snapshot.get("benchmark") or {}
+    benchmark_rows = benchmark.get("overview_rows") or []
+    multi_provider = snapshot.get("multi_provider") or {}
+    chain_rounds = snapshot.get("chain_rounds") or []
+    latest_round = snapshot.get("latest_round") or {}
+
+    benchmark_table = render_table(
+        ["benchmark", "run", "verifier", "duration", "avg chain", "max chain"],
+        [
+            [
+                str(row.get("benchmark", "")),
+                str(row.get("run_status", "")),
+                str(row.get("verifier_status", "")),
+                str(row.get("duration_sec", "")),
+                str(row.get("chain_avg_sec", "")),
+                str(row.get("chain_max_sec", "")),
+            ]
+            for row in benchmark_rows
+        ],
+    )
+    provider_table = render_table(
+        ["provider", "source", "run", "full pass", "timing", "avg chain", "max chain"],
+        [
+            [
+                str(row.get("provider", "")),
+                str(row.get("source", "")),
+                str(row.get("run_pass", "")),
+                str(row.get("full_pass", "")),
+                str(row.get("timing", "")),
+                str(row.get("avg_chain_sec", "")),
+                str(row.get("max_chain_sec", "")),
+            ]
+            for row in (multi_provider.get("providers") or [])
+        ],
+    )
+    rounds_table = render_table(
+        ["round", "mode", "continuity", "blind_spot", "collapse", "recovery"],
+        [
+            [
+                str(row.get("round", "")),
+                str(row.get("mode", "")),
+                str(row.get("continuity_score", "")),
+                str(row.get("blind_spot_score", "")),
+                str(row.get("collapse_detected", "")),
+                str(row.get("recovery_applied", "")),
+            ]
+            for row in chain_rounds
+        ],
+    )
+
+    latest_chain = snapshot.get("latest_chain") or "(none)"
+    latest_benchmark_dir = benchmark.get("report_dir") or "(none)"
+    latest_multi_dir = multi_provider.get("report_dir") or "(none)"
+
+    return f"""<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>HWP Dashboard</title>
+  <style>
+    :root {{
+      --bg: #f4efe5;
+      --ink: #1f1b16;
+      --muted: #6f6458;
+      --card: #fffaf2;
+      --line: #d9cdbf;
+      --accent: #b44f2f;
+      --accent-soft: #f4d8c8;
+    }}
+    * {{ box-sizing: border-box; }}
+    body {{
+      margin: 0;
+      font-family: Georgia, "Times New Roman", serif;
+      color: var(--ink);
+      background:
+        radial-gradient(circle at top left, rgba(180,79,47,0.14), transparent 28%),
+        linear-gradient(180deg, #f7f1e7 0%, var(--bg) 100%);
+    }}
+    .wrap {{ max-width: 1200px; margin: 0 auto; padding: 32px 20px 56px; }}
+    h1, h2 {{ margin: 0 0 12px; }}
+    p {{ margin: 0; color: var(--muted); }}
+    .hero {{
+      display: grid;
+      gap: 16px;
+      padding: 28px;
+      border: 1px solid var(--line);
+      background: linear-gradient(135deg, rgba(255,250,242,0.96), rgba(244,216,200,0.86));
+      border-radius: 24px;
+      box-shadow: 0 12px 40px rgba(70, 47, 29, 0.08);
+    }}
+    .stats {{
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+      gap: 14px;
+      margin-top: 24px;
+    }}
+    .stat, .panel {{
+      background: var(--card);
+      border: 1px solid var(--line);
+      border-radius: 18px;
+      padding: 18px;
+      box-shadow: 0 8px 30px rgba(70, 47, 29, 0.05);
+    }}
+    .stat .label {{ font-size: 12px; text-transform: uppercase; letter-spacing: 0.08em; color: var(--muted); }}
+    .stat .value {{ font-size: 28px; margin-top: 6px; color: var(--accent); }}
+    .grid {{
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+      gap: 18px;
+      margin-top: 24px;
+    }}
+    .panel.full {{ grid-column: 1 / -1; }}
+    table {{ width: 100%; border-collapse: collapse; font-size: 14px; }}
+    th, td {{ text-align: left; padding: 10px 8px; border-bottom: 1px solid var(--line); vertical-align: top; }}
+    th {{ font-size: 12px; text-transform: uppercase; letter-spacing: 0.05em; color: var(--muted); }}
+    .pill {{
+      display: inline-block;
+      padding: 4px 10px;
+      border-radius: 999px;
+      background: var(--accent-soft);
+      color: var(--accent);
+      font-size: 12px;
+      margin-right: 8px;
+    }}
+    .empty {{ color: var(--muted); font-style: italic; }}
+    code {{ font-family: "SFMono-Regular", Consolas, monospace; font-size: 12px; }}
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <section class="hero">
+      <div>
+        <span class="pill">Legacy Read-Only Dashboard</span>
+        <span class="pill">/api/dashboard available</span>
+      </div>
+      <div>
+        <h1>HWP Benchmark And Protocol Dashboard</h1>
+        <p>Latest benchmark outputs, multi-provider comparison, and per-round protocol state in one lightweight view.</p>
+      </div>
+    </section>
+    <section class="stats">
+      <article class="stat">
+        <div class="label">Latest Chain</div>
+        <div class="value">{escape(str(latest_round.get("round", "0") or "0"))}</div>
+        <p>Latest completed round</p>
+      </article>
+      <article class="stat">
+        <div class="label">Latest Mode</div>
+        <div class="value">{escape(str(latest_round.get("mode", "") or "-"))}</div>
+        <p>Current speed mode</p>
+      </article>
+      <article class="stat">
+        <div class="label">Continuity</div>
+        <div class="value">{escape(str(latest_round.get("continuity_score", "") or "-"))}</div>
+        <p>Latest continuity score</p>
+      </article>
+      <article class="stat">
+        <div class="label">Blind Spot</div>
+        <div class="value">{escape(str(latest_round.get("blind_spot_score", "") or "-"))}</div>
+        <p>Latest blind spot score</p>
+      </article>
+    </section>
+    <section class="grid">
+      <article class="panel">
+        <h2>Sources</h2>
+        <p><strong>Chain:</strong> <code>{escape(str(latest_chain))}</code></p>
+        <p><strong>Benchmark:</strong> <code>{escape(str(latest_benchmark_dir))}</code></p>
+        <p><strong>Multi-Provider:</strong> <code>{escape(str(latest_multi_dir))}</code></p>
+      </article>
+      <article class="panel">
+        <h2>Latest Round</h2>
+        <p><strong>Round:</strong> {escape(str(latest_round.get("round", "") or "-"))}</p>
+        <p><strong>Mode:</strong> {escape(str(latest_round.get("mode", "") or "-"))}</p>
+        <p><strong>Continuity:</strong> {escape(str(latest_round.get("continuity_score", "") or "-"))}</p>
+        <p><strong>Blind Spot:</strong> {escape(str(latest_round.get("blind_spot_score", "") or "-"))}</p>
+        <p><strong>Collapse:</strong> {escape(str(latest_round.get("collapse_detected", "") or "-"))}</p>
+        <p><strong>Recovery:</strong> {escape(str(latest_round.get("recovery_applied", "") or "-"))}</p>
+      </article>
+      <article class="panel full">
+        <h2>Latest Benchmark Overview</h2>
+        {benchmark_table}
+      </article>
+      <article class="panel full">
+        <h2>Latest Multi-Provider Overview</h2>
+        {provider_table}
+      </article>
+      <article class="panel full">
+        <h2>Latest Chain Rounds</h2>
+        {rounds_table}
+      </article>
+    </section>
+  </div>
+</body>
+</html>"""
+
 class Handler(BaseHTTPRequestHandler):
     def _send(self, code: int, payload: dict):
         body = json.dumps(payload, ensure_ascii=False).encode("utf-8")
@@ -42,6 +379,21 @@ class Handler(BaseHTTPRequestHandler):
         self.send_header("Content-Length", str(len(body)))
         self.end_headers()
         self.wfile.write(body)
+
+    def _send_html(self, code: int, html: str):
+        body = html.encode("utf-8")
+        self.send_response(code)
+        self.send_header("Content-Type", "text/html; charset=utf-8")
+        self.send_header("Content-Length", str(len(body)))
+        self.end_headers()
+        self.wfile.write(body)
+
+    def do_GET(self):
+        if self.path in ("/", "/dashboard"):
+            return self._send_html(200, render_dashboard_html(dashboard_snapshot()))
+        if self.path == "/api/dashboard":
+            return self._send(200, dashboard_snapshot())
+        return self._send(404, {"error": "not found"})
 
     def do_POST(self):
         if self.path != "/run":

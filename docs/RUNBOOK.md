@@ -27,6 +27,24 @@ bash runs/run_sequential.sh inputs/probe.txt
 HWP_CHAIN_TIMEOUT_SEC=180 bash runs/run_sequential.sh inputs/probe.txt
 ```
 
+## Open The Lightweight Dashboard
+
+```bash
+python3 hwp_server.py --host 127.0.0.1 --port 8088
+```
+
+Then open:
+
+```text
+http://127.0.0.1:8088/dashboard
+```
+
+JSON snapshot:
+
+```text
+http://127.0.0.1:8088/api/dashboard
+```
+
 ## Validate Provider Setup Without Network
 
 ```bash
