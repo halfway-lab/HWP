@@ -482,7 +482,10 @@ reports/benchmarks/<timestamp>/
 
 - `results.tsv`
 - `summary.md`
+- `overview.md`
 - 每个 benchmark 的独立运行日志与 verifier 输出
+
+其中 `overview.md` 会把 benchmark 结果、verifier 结论，以及从 `logs/run.log` 采集到的链级 timing summary 合并到一张总览表里。
 
 单链运行时，`logs/run.log` 现在还会附带：
 

@@ -46,6 +46,14 @@ HWP_REPLAY_CHAIN_PATH=logs/chain_hwp_1772451330_20939.jsonl HWP_ROUND_SLEEP_SEC=
 HWP_ROUND_SLEEP_SEC=0 bash runs/run_benchmarks.sh
 ```
 
+## Read Benchmark Overview
+
+每次 benchmark 运行后，可直接查看：
+
+```bash
+sed -n '1,120p' reports/benchmarks/<timestamp>/overview.md
+```
+
 ## Run Unified v0.6 Verification
 
 ```bash

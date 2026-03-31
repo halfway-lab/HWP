@@ -9,6 +9,7 @@ TIMESTAMP="$(date +%Y%m%dT%H%M%S)"
 REPORT_DIR="$REPORT_ROOT/$TIMESTAMP"
 RESULTS_TSV="$REPORT_DIR/results.tsv"
 SUMMARY_MD="$REPORT_DIR/summary.md"
+OVERVIEW_MD="$REPORT_DIR/overview.md"
 RUN_LOG="$REPORT_DIR/run.log"
 PROVIDER_TYPE="${HWP_PROVIDER_TYPE:-}"
 PROVIDER_NAME="${HWP_PROVIDER_NAME:-}"
@@ -175,6 +176,11 @@ while IFS= read -r input_path || [ -n "$input_path" ]; do
 done < "$BENCHMARK_FILE"
 
 python3 "$ROOT_DIR/runs/report_benchmarks.py" "$RESULTS_TSV" "$SUMMARY_MD" > "$REPORT_DIR/summary_path.txt"
+python3 "$ROOT_DIR/runs/report_benchmark_overview.py" \
+  "$RESULTS_TSV" \
+  "$REPORT_DIR/context.txt" \
+  "$ROOT_DIR/logs/run.log" \
+  "$OVERVIEW_MD" > "$REPORT_DIR/overview_path.txt"
 
 # 生成回归报告（第5步新增）
 echo ""
@@ -185,4 +191,5 @@ echo
 echo "Benchmark run completed."
 echo "Report directory: $REPORT_DIR"
 echo "Summary: $SUMMARY_MD"
+echo "Overview: $OVERVIEW_MD"
 echo "Regression: $REPORT_DIR/regression.md"
