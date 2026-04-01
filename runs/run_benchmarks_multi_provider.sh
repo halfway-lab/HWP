@@ -18,7 +18,8 @@ source "$ROOT_DIR/runs/lib_agent.sh"
 PROVIDERS_FILE="${1:-$ROOT_DIR/config/providers.list}"
 BENCHMARK_FILE="${2:-$ROOT_DIR/config/benchmark_inputs.txt}"
 REPORT_ROOT="${HWP_BENCHMARK_REPORT_ROOT:-$ROOT_DIR/reports/benchmarks}"
-MULTI_REPORT_DIR="$REPORT_ROOT/multi_$(date +%Y%m%dT%H%M%S)"
+MULTI_TIMESTAMP="$(date +%Y%m%dT%H%M%S)"
+MULTI_REPORT_DIR="$REPORT_ROOT/multi_${MULTI_TIMESTAMP}__$$"
 PROVIDER_STATUS_TSV="$MULTI_REPORT_DIR/provider_status.tsv"
 
 mkdir -p "$MULTI_REPORT_DIR"
@@ -136,6 +137,14 @@ run_provider_benchmark() {
         bash "$ROOT_DIR/runs/run_benchmarks.sh" "$benchmark_file" > "$provider_log" 2>&1
 }
 
+extract_report_dir_from_log() {
+    local provider_log="$1"
+    if [ ! -f "$provider_log" ]; then
+        return 0
+    fi
+    sed -n 's/^Report directory: //p' "$provider_log" | tail -n 1
+}
+
 # 遍历每个 provider
 while IFS='|' read -r provider_name env_file description || [ -n "$provider_name" ]; do
     # 跳过注释和空行
@@ -177,8 +186,10 @@ while IFS='|' read -r provider_name env_file description || [ -n "$provider_name
     if run_provider_benchmark "$env_path" "$BENCHMARK_FILE" "$provider_report_dir/benchmark.log"; then
         echo "✓ $provider_name completed"
         
-        # 找到最新的报告目录
-        latest_report=$(find "$REPORT_ROOT" -maxdepth 1 -type d -name '20*' | sort | tail -1)
+        latest_report="$(extract_report_dir_from_log "$provider_report_dir/benchmark.log")"
+        if [ -z "$latest_report" ] || [ ! -d "$latest_report" ]; then
+            latest_report=$(find "$REPORT_ROOT" -maxdepth 1 -type d -name '20*' | sort | tail -1)
+        fi
         if [ -n "$latest_report" ]; then
             # 创建符号链接或复制关键文件
             cp "$latest_report/results.tsv" "$provider_report_dir/" 2>/dev/null || true

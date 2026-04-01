@@ -22,6 +22,10 @@ from collections import defaultdict
 from datetime import datetime
 from pathlib import Path
 from typing import Dict, List, Optional, Tuple
+import re
+
+
+REPORT_DIR_RE = re.compile(r"^(?P<base>\d{8}T\d{6})(?:__.+)?$")
 
 
 def load_results_tsv(tsv_path: Path) -> List[Dict[str, str]]:
@@ -49,7 +53,10 @@ def load_context(context_path: Path) -> Dict[str, str]:
 
 def find_baseline_report(report_root: Path, current_report: Path) -> Optional[Path]:
     """找到最近的历史基线报告"""
-    current_time = datetime.fromisoformat(current_report.name.replace("T", " ").replace("_", ":"))
+    current_match = REPORT_DIR_RE.match(current_report.name)
+    if not current_match:
+        return None
+    current_time = datetime.strptime(current_match.group("base"), "%Y%m%dT%H%M%S")
     
     baseline_candidates = []
     
@@ -63,9 +70,10 @@ def find_baseline_report(report_root: Path, current_report: Path) -> Optional[Pa
         
         # 尝试解析时间戳
         try:
-            report_time = datetime.fromisoformat(
-                report_dir.name.replace("T", " ").replace("_", ":")
-            )
+            match = REPORT_DIR_RE.match(report_dir.name)
+            if not match:
+                continue
+            report_time = datetime.strptime(match.group("base"), "%Y%m%dT%H%M%S")
             if report_time < current_time:
                 baseline_candidates.append((report_time, report_dir))
         except ValueError:

@@ -6,7 +6,8 @@ ROOT_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
 BENCHMARK_FILE="${1:-$ROOT_DIR/config/benchmark_inputs.txt}"
 REPORT_ROOT="${HWP_BENCHMARK_REPORT_ROOT:-$ROOT_DIR/reports/benchmarks}"
 TIMESTAMP="$(date +%Y%m%dT%H%M%S)"
-REPORT_DIR="$REPORT_ROOT/$TIMESTAMP"
+RUN_ID="${TIMESTAMP}__$$"
+REPORT_DIR="$REPORT_ROOT/$RUN_ID"
 RESULTS_TSV="$REPORT_DIR/results.tsv"
 SUMMARY_MD="$REPORT_DIR/summary.md"
 OVERVIEW_MD="$REPORT_DIR/overview.md"
@@ -35,6 +36,7 @@ fi
   echo "provider_name=${PROVIDER_NAME:-unknown}"
   echo "report_dir=$REPORT_DIR"
   echo "started_at=$TIMESTAMP"
+  echo "run_id=$RUN_ID"
 } > "$REPORT_DIR/context.txt"
 
 echo -e "benchmark\tinput_path\tprovider_type\tprovider_name\trun_status\trun_exit_code\tduration_sec\tfailure_reason\tlog_count\tstructured\tstructured_reason\tblind_spot\tblind_spot_reason\tcontinuity\tcontinuity_reason\tsemantic_groups\tsemantic_groups_reason\treport_dir" > "$RESULTS_TSV"
@@ -134,8 +136,9 @@ while IFS= read -r input_path || [ -n "$input_path" ]; do
     [ -z "$session_id" ] && continue
     log_path="$ROOT_DIR/logs/chain_${session_id}.jsonl"
     if [ -f "$log_path" ]; then
-      cp "$log_path" "$bench_logs_dir/"
-      log_count=$((log_count + 1))
+      if cp "$log_path" "$bench_logs_dir/" 2>/dev/null; then
+        log_count=$((log_count + 1))
+      fi
     fi
   done < "$session_file"
 
