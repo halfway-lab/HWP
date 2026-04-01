@@ -1,0 +1,33 @@
+{
+  "version": "0.6.2",
+  "modes": {
+    "Rg0": {
+      "name": "Normal",
+      "description": "Balanced exploration and stability",
+      "entropy_target": {"min": 0.40, "max": 0.79}
+    },
+    "Rg1": {
+      "name": "Stable",
+      "description": "Low drift, high stability",
+      "entropy_target": {"min": 0.55, "max": 0.85}
+    },
+    "Rg2": {
+      "name": "Explore",
+      "description": "High drift, maximum exploration",
+      "entropy_target": {"min": 0.35, "max": 0.65}
+    }
+  },
+  "thresholds": {
+    "drift_low": 0.30,
+    "drift_high": 0.70
+  },
+  "defaults": {
+    "rounds_per_chain": 8,
+    "round_sleep_sec": 2.0,
+    "variable_policy": {
+      "keep_n": 20,
+      "new_n": 10,
+      "max_vars": 30
+    }
+  }
+}

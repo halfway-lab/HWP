@@ -1,4 +1,6 @@
-# HWP v0.4 Hardened — Protocol Rules (Spec Summary)
+# HWP v0.6 RC2 — Protocol Rules (Spec Summary)
+
+> **Note**: This document summarizes the core protocol rules. For the authoritative prompt spec, see `spec/hwp_turn_prompt.txt`.
 
 ## Output schema (top-level keys)
 Required keys:
@@ -35,8 +37,9 @@ Set collapse_detected = true if ANY holds:
 2) drift_rate >= 0.70
 3) entropy_score >= 0.80 AND drift_rate >= 0.30
 4) novelty_rate <= 0.12 AND drift_rate >= 0.30
-5) drift_rate >= 0.50 for 2 consecutive rounds
 Else collapse_detected = false.
+
+> **Implementation Note**: The condition "drift_rate >= 0.50 for 2 consecutive rounds" from earlier specs is NOT currently implemented in `hwp_protocol/transform.py`.
 
 ## Recovery Application
 If collapse_detected == true:
@@ -65,3 +68,10 @@ If parent_recovery_applied == true:
 - Else if drift_rate < 0.30 => mode = Rg1
 - Else if drift_rate > 0.70 => mode = Rg2
 - Else => mode = Rg0
+
+## Entropy Target Bands (per mode)
+- Rg0 (Normal): entropy_target = [0.40, 0.79]
+- Rg1 (Stable): entropy_target = [0.55, 0.85]
+- Rg2 (Explore): entropy_target = [0.35, 0.65]
+
+See `spec/hwp_turn_prompt.txt` lines 189-192 for authoritative definition.

@@ -1,6 +1,6 @@
 # HWP Stability Status
 
-Last updated: 2026-03-31
+Last updated: 2026-04-02
 
 ## Current Status
 
@@ -18,6 +18,9 @@ The protocol/runtime path is functioning end to end:
 ## What Is Stable
 
 - Protocol field normalization in `hwp_protocol/transform.py`
+- Unified Python CLI in `hwp_protocol/cli.py` including:
+  - `transform enrich` / `transform repack` / `transform-batch`
+  - `fixture-verify` / `log-verify` / `note-infer`
 - Continuity / blind spot / semantic-group verification flow
 - Replay runner execution through `runs/run_sequential.sh`
 - Legacy compatibility entrypoints:

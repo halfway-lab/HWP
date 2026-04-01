@@ -3,11 +3,11 @@ set -euo pipefail
 
 # Hard-fail on jq/python errors (avoid truncated chains being treated as success)
 JQ_SAFE() {
-  jq "$@" || { echo "FATAL: jq failed" >&2; exit 1; }
+  jq "$@" || { echo "FATAL: [run_sequential] jq failed" >&2; exit 1; }
 }
 
 PYTHON_SAFE() {
-  python3 "$@" || { echo "FATAL: python materializer failed" >&2; exit 1; }
+  python3 "$@" || { echo "FATAL: [run_sequential] python materializer failed" >&2; exit 1; }
 }
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -53,7 +53,10 @@ fi
 LOG_DIR="$ROOT_DIR/logs"
 SPEC_PROMPT="$ROOT_DIR/spec/hwp_turn_prompt.txt"
 
-PROMPT_FINGERPRINT="$(grep -m1 '^PROMPT_FINGERPRINT:' "$SPEC_PROMPT" | sed -E 's/^PROMPT_FINGERPRINT:[[:space:]]*//')"
+PROMPT_FINGERPRINT="$(grep -m1 '^PROMPT_FINGERPRINT:' "$SPEC_PROMPT" | sed -E 's/^PROMPT_FINGERPRINT:[[:space:]]*//')" || {
+  echo "FATAL: [run_sequential] Failed to extract PROMPT_FINGERPRINT from spec file" >&2
+  exit 1
+}
 [ -z "${PROMPT_FINGERPRINT:-}" ] && PROMPT_FINGERPRINT="(missing)"
 
 ROUND_SLEEP_SEC="${HWP_ROUND_SLEEP_SEC:-2}"
@@ -68,6 +71,19 @@ if ! awk -v x="$CHAIN_TIMEOUT_SEC" 'BEGIN{exit !(x ~ /^[0-9]+([.][0-9]+)?$/)}'; 
   exit 1
 fi
 mkdir -p "$LOG_DIR"
+
+# ---- Load controller config (if exists) ----
+CONTROLLER_CONFIG="$ROOT_DIR/config/controller.json"
+if [ -f "$CONTROLLER_CONFIG" ]; then
+  CONTROLLER_DRIFT_LOW=$(JQ_SAFE -r '.thresholds.drift_low // 0.30' "$CONTROLLER_CONFIG")
+  CONTROLLER_DRIFT_HIGH=$(JQ_SAFE -r '.thresholds.drift_high // 0.70' "$CONTROLLER_CONFIG")
+  # Override with environment variables if set
+  CONTROLLER_DRIFT_LOW="${HWP_DRIFT_LOW_THRESHOLD:-$CONTROLLER_DRIFT_LOW}"
+  CONTROLLER_DRIFT_HIGH="${HWP_DRIFT_HIGH_THRESHOLD:-$CONTROLLER_DRIFT_HIGH}"
+else
+  CONTROLLER_DRIFT_LOW="${HWP_DRIFT_LOW_THRESHOLD:-0.30}"
+  CONTROLLER_DRIFT_HIGH="${HWP_DRIFT_HIGH_THRESHOLD:-0.70}"
+fi
 
 now_epoch() {
   python3 - <<'PY'
@@ -120,14 +136,26 @@ repack_result_with_inner() {
   PYTHON_SAFE -m hwp_protocol.cli transform repack "$result_json" "$inner_json"
 }
 
+# Batch transform: enrich + repack in one Python call
+transform_batch() {
+  local result_json="$1"
+  local inner_json="$2"
+  local round="$3"
+  local parent_recovery_flag="$4"
+  PYTHON_SAFE -m hwp_protocol.cli transform-batch "$result_json" "$inner_json" "$round" "$parent_recovery_flag"
+}
+
 load_replay_result_json() {
   local replay_path="$1"
   local round="$2"
   local replay_line
 
-  replay_line="$(sed -n "${round}p" "$replay_path")"
+  replay_line="$(sed -n "${round}p" "$replay_path")" || {
+    echo "FATAL: [run_sequential] Failed to read replay data at round ${round} from $replay_path" >&2
+    exit 1
+  }
   if [ -z "$replay_line" ]; then
-    echo "错误：回放链在第 ${round} 轮缺少数据: $replay_path" >&2
+    echo "FATAL: [run_sequential] Replay chain missing data at round ${round}: $replay_path" >&2
     exit 1
   fi
 
@@ -148,6 +176,12 @@ f_lt() { awk -v a="$1" -v b="$2" 'BEGIN{exit !(a<b)}'; }
 
 compute_mode() {
   # args: round is_probe prev_entropy prev_drift prev_collapse prev_recovery
+  # 
+  # SPEC-COMPLIANT (per hwp_turn_prompt.txt line 162-168):
+  # Rg0 = Normal mode (drift_low <= drift_rate <= drift_high)
+  # Rg1 = Stable mode (drift_rate < drift_low)
+  # Rg2 = Explore mode (drift_rate > drift_high)
+  # Thresholds loaded from config/controller.json or env vars
   local round="$1" is_probe="$2" pe="$3" pd="$4" pc="$5" pr="$6"
 
   if [ "$round" -eq 1 ]; then
@@ -160,34 +194,48 @@ compute_mode() {
     echo "Rg0"; return
   fi
 
-  # High drift -> slow/stabilize
-  if f_gt "$pd" "0.55"; then
-    echo "Rg0"; return
+  # Stable mode: low drift rate (< drift_low)
+  if f_lt "$pd" "$CONTROLLER_DRIFT_LOW"; then
+    echo "Rg1"; return
   fi
 
-  # Entropy too high -> slow
-  if f_gt "$pe" "0.88"; then
-    echo "Rg0"; return
-  fi
-
-  # Entropy too low -> inject novelty
-  if f_lt "$pe" "0.45"; then
+  # Explore mode: high drift rate (> drift_high)
+  if f_gt "$pd" "$CONTROLLER_DRIFT_HIGH"; then
     echo "Rg2"; return
   fi
 
-  echo "Rg1"
+  # Normal mode: medium drift rate (drift_low <= drift <= drift_high)
+  echo "Rg0"
 }
+
 
 compute_band() {
   # args: mode -> prints "min max"
+  # Entropy target bands loaded from config/controller.json
   local mode="$1"
+
+  # Try loading from config file
+  if [ -f "$CONTROLLER_CONFIG" ]; then
+    local mode_config
+    mode_config=$(JQ_SAFE -c --arg m "$mode" '.modes[$m].entropy_target // empty' "$CONTROLLER_CONFIG" 2>/dev/null) || mode_config=""
+    if [ -n "$mode_config" ]; then
+      local mn mx
+      mn=$(echo "$mode_config" | JQ_SAFE -r '.min // 0.40')
+      mx=$(echo "$mode_config" | JQ_SAFE -r '.max // 0.79')
+      echo "$mn $mx"
+      return
+    fi
+  fi
+
+  # Fallback to defaults
   case "$mode" in
-    Rg0) echo "0.35 0.92" ;;
-    Rg1) echo "0.50 0.92" ;;
-    Rg2) echo "0.25 0.80" ;;
-    *)   echo "0.35 0.92" ;;
+    Rg0) echo "0.40 0.79" ;;  # Normal: [0.40, 0.79]
+    Rg1) echo "0.55 0.85" ;;  # Stable: [0.55, 0.85]
+    Rg2) echo "0.35 0.65" ;;  # Explore: [0.35, 0.65]
+    *)   echo "0.40 0.79" ;;  # Default to Rg0
   esac
 }
+
 
 # 读取输入文件，每行一条测试链
 require_hwp_agent_provider "$HWP_REPLAY_CHAIN_PATH"
@@ -210,7 +258,10 @@ while IFS= read -r line || [ -n "$line" ]; do
   # baseline controller state reused by the v0.6 RC2 runner
   base_line="$line"
   # prevent conflicts if user left RHYTHM_HINT in input accidentally
-  base_line="$(printf "%s" "$base_line" | sed 's/RHYTHM_HINT=/RHYTHM_HINT_DISABLED=/g')"
+  base_line="$(printf "%s" "$base_line" | sed 's/RHYTHM_HINT=/RHYTHM_HINT_DISABLED=/g')" || {
+    echo "FATAL: [run_sequential] Failed to sanitize RHYTHM_HINT in input line" >&2
+    exit 1
+  }
 
   is_probe="0"
   if echo "$base_line" | grep -q 'COLLAPSE_PROBE=1'; then is_probe="1"; fi
@@ -268,7 +319,10 @@ Now run Round $r."
       # 清洗输出：去掉 ANSI 控制字符，提取第一个 { 开始的有效 JSON
       cleaned_json=$(printf "%s\n" "$raw_output" \
         | sed -r 's/\x1B\[[0-9;]*[mK]//g' \
-        | awk 'BEGIN{f=0}{ if(!f){ i=index($0,"{"); if(i){ f=1; print substr($0,i) } } else { print } }')
+        | awk 'BEGIN{f=0}{ if(!f){ i=index($0,"{"); if(i){ f=1; print substr($0,i) } } else { print } }') || {
+        echo "FATAL: [run_sequential] Failed to clean agent output" >&2
+        exit 1
+      }
 
       if [ -z "$cleaned_json" ]; then
         echo "FAIL: empty response after cleaning at round $r" | tee -a "$LOG_DIR/run.log"
@@ -280,7 +334,10 @@ Now run Round $r."
     fi
 
     # 提取 payload.text（应是内层 round JSON）
-    txt=$(echo "$result_json" | JQ_SAFE -r '.payloads[0].text // ""')
+    txt=$(echo "$result_json" | JQ_SAFE -r '.payloads[0].text // ""') || {
+      echo "FATAL: [run_sequential] Failed to extract payload.text from result JSON" >&2
+      exit 1
+    }
 
     # provider block / 非 JSON：写 fallback（并且确保 fallback 自身可被 verify 解析）
     if [[ "$txt" != \{* ]]; then
@@ -319,12 +376,17 @@ Now run Round $r."
           provider_block_snip:$snip
         }')
 
-      inner_json="$(enrich_v06_inner_json "$inner_json" "$r" "$parent_recovery")"
-      result_json="$(repack_result_with_inner "$result_json" "$inner_json")"
+      result_json="$(transform_batch "$result_json" "$inner_json" "$r" "$parent_recovery")"
       echo "$result_json" >> "$log_file"
 
-      parent_vars=$(echo "$inner_json" | JQ_SAFE -c '.variables // []')
-      parent_node=$(echo "$inner_json" | JQ_SAFE -r '.node_id')
+      parent_vars=$(echo "$result_json" | JQ_SAFE -r '.payloads[0].text // empty' | JQ_SAFE -c '.variables // []') || {
+        echo "FATAL: [run_sequential] Failed to extract variables from fallback inner JSON" >&2
+        exit 1
+      }
+      parent_node=$(echo "$result_json" | JQ_SAFE -r '.payloads[0].text // empty' | JQ_SAFE -r '.node_id') || {
+        echo "FATAL: [run_sequential] Failed to extract node_id from fallback inner JSON" >&2
+        exit 1
+      }
       parent_recovery="true"
 
       prev_entropy="0.70"
@@ -350,19 +412,39 @@ Now run Round $r."
 
     # payload.text 已经是 JSON object 文本，直接解析为对象
     inner_json=$(printf "%s" "$txt" | JQ_SAFE -c '.')
-    inner_json="$(enrich_v06_inner_json "$inner_json" "$r" "$parent_recovery")"
-    result_json="$(repack_result_with_inner "$result_json" "$inner_json")"
+    result_json="$(transform_batch "$result_json" "$inner_json" "$r" "$parent_recovery")"
     echo "$result_json" >> "$log_file"
 
-    parent_vars=$(echo "$inner_json" | JQ_SAFE -c '.variables // []')
-    parent_node=$(echo "$inner_json" | JQ_SAFE -r '.node_id // "null"')
-    parent_recovery=$(echo "$inner_json" | JQ_SAFE -r '.recovery_applied // "false"')
+    parent_vars=$(echo "$result_json" | JQ_SAFE -r '.payloads[0].text // empty' | JQ_SAFE -c '.variables // []') || {
+      echo "FATAL: [run_sequential] Failed to extract variables from inner JSON" >&2
+      exit 1
+    }
+    parent_node=$(echo "$result_json" | JQ_SAFE -r '.payloads[0].text // empty' | JQ_SAFE -r '.node_id // "null"') || {
+      echo "FATAL: [run_sequential] Failed to extract node_id from inner JSON" >&2
+      exit 1
+    }
+    parent_recovery=$(echo "$result_json" | JQ_SAFE -r '.payloads[0].text // empty' | JQ_SAFE -r '.recovery_applied // "false"') || {
+      echo "FATAL: [run_sequential] Failed to extract recovery_applied from inner JSON" >&2
+      exit 1
+    }
 
     # update controller state for next round
-    prev_entropy=$(echo "$inner_json" | JQ_SAFE -r '.entropy_score // 0.70')
-    prev_drift=$(echo "$inner_json" | JQ_SAFE -r '.drift_rate // 0.0')
-    prev_collapse=$(echo "$inner_json" | JQ_SAFE -r '.collapse_detected // false')
-    prev_recovery=$(echo "$inner_json" | JQ_SAFE -r '.recovery_applied // false')
+    prev_entropy=$(echo "$result_json" | JQ_SAFE -r '.payloads[0].text // empty' | JQ_SAFE -r '.entropy_score // 0.70') || {
+      echo "FATAL: [run_sequential] Failed to extract entropy_score from inner JSON" >&2
+      exit 1
+    }
+    prev_drift=$(echo "$result_json" | JQ_SAFE -r '.payloads[0].text // empty' | JQ_SAFE -r '.drift_rate // 0.0') || {
+      echo "FATAL: [run_sequential] Failed to extract drift_rate from inner JSON" >&2
+      exit 1
+    }
+    prev_collapse=$(echo "$result_json" | JQ_SAFE -r '.payloads[0].text // empty' | JQ_SAFE -r '.collapse_detected // false') || {
+      echo "FATAL: [run_sequential] Failed to extract collapse_detected from inner JSON" >&2
+      exit 1
+    }
+    prev_recovery=$(echo "$result_json" | JQ_SAFE -r '.payloads[0].text // empty' | JQ_SAFE -r '.recovery_applied // false') || {
+      echo "FATAL: [run_sequential] Failed to extract recovery_applied from inner JSON" >&2
+      exit 1
+    }
     round_elapsed="$(elapsed_sec "$round_start_ts")"
     chain_elapsed="$(elapsed_sec "$chain_start_ts")"
     completed_rounds=$((completed_rounds + 1))

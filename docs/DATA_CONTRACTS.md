@@ -227,6 +227,44 @@ Top-level keys:
 | `benchmark` | Same shape as `/api/benchmark/latest` |
 | `multi_provider` | Same shape as `/api/multi-provider/latest` |
 
+## Protocol Version
+
+All enriched JSON outputs from `hwp_protocol.transform` include a `protocol_version` field for schema versioning and compatibility tracking.
+
+### Field Specification
+
+| Field | Type | Location | Description |
+| --- | --- | --- | --- |
+| `protocol_version` | string | inner JSON, outer result | Semantic version string indicating the protocol schema version |
+
+### Version Format
+
+The version follows [Semantic Versioning](https://semver.org/) with the format `MAJOR.MINOR.PATCH`:
+
+- **MAJOR**: Breaking schema changes (field removal, type changes, required fields added)
+- **MINOR**: Backward-compatible additions (new optional fields, new enum values)
+- **PATCH**: Backward-compatible fixes (validation logic updates, default value changes)
+
+Current version: `0.6.2`
+
+### Compatibility Rules
+
+1. **Patch version changes** (e.g., `0.6.1` → `0.6.2`): Consumers should accept without modification
+2. **Minor version changes** (e.g., `0.6.x` → `0.7.0`): Consumers should tolerate new optional fields
+3. **Major version changes** (e.g., `0.x.x` → `1.0.0`): Consumers may need code changes
+
+### Version Validation
+
+The `check_protocol_version(inner, strict=False)` function validates version strings:
+
+- **Non-strict mode** (default): Warns only on malformed version strings; missing version is tolerated
+- **Strict mode**: Errors on missing version, non-string types, invalid semver format, or version mismatch
+
+Example validation messages:
+- `WARN: protocol_version 'invalid' is not a valid semver string`
+- `ERROR: protocol_version is missing (expected 0.6.2)`
+- `ERROR: protocol_version mismatch: got 0.5.0, expected 0.6.2`
+
 ## Stability Expectations
 
 - Field names in this document should be treated as stable within the current RC2-era mainline unless explicitly changed in release notes.

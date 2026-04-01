@@ -115,6 +115,30 @@ sed -n '1,120p' reports/benchmarks/<timestamp>/overview.md
 bash runs/verify_v06_all.sh <logs_dir>
 ```
 
+## Python CLI Commands
+
+The unified Python CLI provides protocol-core operations:
+
+```bash
+# Fixture verification
+python3 -m hwp_protocol.cli fixture-verify blind_spot valid
+python3 -m hwp_protocol.cli fixture-verify continuity valid
+
+# Log verification
+python3 -m hwp_protocol.cli log-verify continuity logs/chain_hwp_xxx.jsonl
+python3 -m hwp_protocol.cli log-verify blind_spot logs/chain_hwp_xxx.jsonl
+python3 -m hwp_protocol.cli log-verify semantic_groups logs/chain_hwp_xxx.jsonl
+
+# Transform operations
+python3 -m hwp_protocol.cli transform enrich '<inner_json>' <round> <parent_recovery>
+python3 -m hwp_protocol.cli transform repack '<result_json>' '<inner_json>'
+
+# Batch transform (enrich + repack in one call)
+python3 -m hwp_protocol.cli transform-batch '<result_json>' '<inner_json>' <round> <parent_recovery>
+```
+
+> **Note**: `transform-batch` is a convenience command that combines `enrich` and `repack` into a single call, useful for runner integration.
+
 ## Common Outputs
 
 - Logs:

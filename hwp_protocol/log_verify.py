@@ -26,19 +26,71 @@ def has_failures(messages: list[VerificationMessage]) -> bool:
     return any(item.status == "FAIL" for item in messages)
 
 
+def check_corrupt_lines(
+    corrupt_count: int, total_lines: int
+) -> list[VerificationMessage]:
+    """
+    Generate verification messages for corrupt JSONL lines.
+
+    Args:
+        corrupt_count: Number of corrupt/unparseable lines
+        total_lines: Total number of non-empty lines processed
+
+    Returns:
+        List of VerificationMessage regarding corrupt line status
+    """
+    messages: list[VerificationMessage] = []
+
+    if corrupt_count == 0:
+        return messages
+
+    # Calculate corruption ratio
+    if total_lines > 0:
+        ratio = corrupt_count / total_lines
+    else:
+        ratio = 0.0
+
+    messages.append(
+        VerificationMessage("WARN", f"检测到 {corrupt_count} 行损坏的 JSONL 数据")
+    )
+
+    if ratio > 0.2:
+        messages.append(
+            VerificationMessage(
+                "FAIL",
+                f"损坏行占比 {ratio:.1%} 超过 20% 阈值，验证结果可能不可靠",
+            )
+        )
+
+    return messages
+
+
+def count_total_lines(path: Path) -> int:
+    """Count total non-empty lines in a file."""
+    count = 0
+    with path.open("r", encoding="utf-8") as f:
+        for line in f:
+            if line.strip():
+                count += 1
+    return count
+
+
 def collect_blind_spot_messages(path: Path) -> list[VerificationMessage]:
-    records = load_jsonl(path)
+    records, corrupt_count = load_jsonl(path)
+    total_lines = count_total_lines(path)
     record_pairs = iter_record_pairs(records)
+
+    messages: list[VerificationMessage] = check_corrupt_lines(corrupt_count, total_lines)
+
     if not records:
-        return [
+        messages.extend([
             VerificationMessage("WARN", "无法检查 blind_spot_signals（无可解析日志记录）"),
             VerificationMessage("WARN", "无法检查 blind_spot_score（无可解析日志记录）"),
             VerificationMessage("WARN", "无法检查 blind_spot_reason（无可解析日志记录）"),
             VerificationMessage("WARN", "无法检查范围（无可解析日志记录）"),
             VerificationMessage("WARN", "无法检查字段类型（无可解析日志记录）"),
-        ]
-
-    messages: list[VerificationMessage] = []
+        ])
+        return messages
 
     signals_present = any(
         "blind_spot_signals" in record or "blind_spot_signals" in inner for record, inner in record_pairs
@@ -120,12 +172,15 @@ def collect_blind_spot_messages(path: Path) -> list[VerificationMessage]:
 
 
 def collect_continuity_messages(path: Path) -> list[VerificationMessage]:
-    records = load_jsonl(path)
+    records, corrupt_count = load_jsonl(path)
+    total_lines = count_total_lines(path)
     record_pairs = iter_record_pairs(records)
-    if not records:
-        return [VerificationMessage("WARN", "无日志文件可供分析")]
 
-    messages: list[VerificationMessage] = []
+    messages: list[VerificationMessage] = check_corrupt_lines(corrupt_count, total_lines)
+
+    if not records:
+        messages.append(VerificationMessage("WARN", "无日志文件可供分析"))
+        return messages
 
     has_round = any(("round" in record) or ("turn" in record) or ("round" in inner) for record, inner in record_pairs)
     if has_round:
@@ -146,16 +201,19 @@ def collect_continuity_messages(path: Path) -> list[VerificationMessage]:
 
 
 def collect_semantic_groups_messages(path: Path) -> list[VerificationMessage]:
-    records = load_jsonl(path)
+    records, corrupt_count = load_jsonl(path)
+    total_lines = count_total_lines(path)
     record_pairs = iter_record_pairs(records)
+
+    messages: list[VerificationMessage] = check_corrupt_lines(corrupt_count, total_lines)
+
     if not records:
-        return [
+        messages.extend([
             VerificationMessage("WARN", "无日志文件可供分析"),
             VerificationMessage("WARN", "无法检查语义组标识符（无可解析日志记录）"),
             VerificationMessage("WARN", "无法检查跨域污染（无可解析日志记录）"),
-        ]
-
-    messages: list[VerificationMessage] = []
+        ])
+        return messages
 
     has_group_fields = any(
         any(key in record for key in ("semantic_groups", "group_id", "group_count"))

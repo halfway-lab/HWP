@@ -1,23 +1,29 @@
 #!/usr/bin/env python3
+"""OpenAI 兼容适配器
+
+支持 OpenAI、DeepSeek、Moonshot、Groq、OpenRouter 等兼容 API 的 LLM 服务。
+"""
 from pathlib import Path
-import json
 import sys
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 
+from typing import Any
+
 from adapter_common import (
-    extract_json_object_text,
     fail,
     first_env,
     hwp_message,
     hwp_round,
     hwp_session_id,
     json_headers,
-    optional_env,
-    post_json,
     require_first_env,
-    wrap_result,
 )
+from base_adapter import AdapterBase
+
+# 保留原有的 post_json 导入，供测试 mock 使用
+from adapter_common import post_json
+
 
 PROVIDER_BASE_URLS = {
     "openai": "https://api.openai.com/v1",
@@ -43,6 +49,14 @@ SYSTEM_PROMPT = (
 
 
 def resolve_base_url(provider_name: str) -> str:
+    """解析 provider 的 base URL
+
+    Args:
+        provider_name: provider 名称
+
+    Returns:
+        base URL
+    """
     explicit = first_env("HWP_LLM_BASE_URL", "OPENAI_BASE_URL", default="").rstrip("/")
     if explicit:
         return explicit
@@ -58,6 +72,56 @@ def resolve_base_url(provider_name: str) -> str:
     )
 
 
+class OpenAICompatibleAdapter(AdapterBase):
+    """OpenAI 兼容 API 适配器"""
+
+    def __init__(
+        self,
+        base_url: str,
+        model: str,
+        api_key: str,
+        timeout: int = 120,
+        temperature: float = 0.7,
+    ) -> None:
+        super().__init__(base_url, model, api_key, timeout)
+        self.temperature = temperature
+
+    def _get_endpoint(self) -> str:
+        return "/chat/completions"
+
+    def _get_headers(self) -> dict[str, str]:
+        return json_headers({"Authorization": f"Bearer {self.api_key}"})
+
+    def _build_payload(self, message: str) -> dict[str, Any]:
+        return {
+            "model": self.model,
+            "temperature": self.temperature,
+            "messages": [
+                {"role": "system", "content": SYSTEM_PROMPT},
+                {
+                    "role": "user",
+                    "content": (
+                        f"Session: {hwp_session_id()}\n"
+                        f"Round: {hwp_round() or 'unknown'}\n\n"
+                        f"{message}"
+                    ),
+                },
+            ],
+        }
+
+    def _post_request(self, endpoint: str, payload: dict[str, Any], headers: dict[str, str]) -> dict[str, Any]:
+        """HTTP POST 封装 - 调用本模块作用域内的 post_json 供测试 mock"""
+        url = f"{self.base_url}{endpoint}"
+        return post_json(url, payload, headers, timeout=self.timeout)
+
+    def _parse_response(self, response: dict[str, Any]) -> str:
+        return (
+            response.get("choices", [{}])[0]
+            .get("message", {})
+            .get("content", "")
+        )
+
+
 def main() -> int:
     try:
         api_key = require_first_env("HWP_LLM_API_KEY", "OPENAI_API_KEY")
@@ -67,36 +131,17 @@ def main() -> int:
         temperature = float(first_env("HWP_LLM_TEMPERATURE", "HWP_OPENAI_TEMPERATURE", default="0.7"))
         timeout = int(first_env("HWP_LLM_TIMEOUT_SEC", "HWP_OPENAI_TIMEOUT_SEC", default="120"))
 
-        payload = {
-            "model": model,
-            "temperature": temperature,
-            "messages": [
-                {"role": "system", "content": SYSTEM_PROMPT},
-                {
-                    "role": "user",
-                    "content": (
-                        f"Session: {hwp_session_id()}\n"
-                        f"Round: {hwp_round() or 'unknown'}\n\n"
-                        f"{hwp_message()}"
-                    ),
-                },
-            ],
-        }
-
-        response = post_json(
-            f"{base_url}/chat/completions",
-            payload,
-            json_headers({"Authorization": f"Bearer {api_key}"}),
+        adapter = OpenAICompatibleAdapter(
+            base_url=base_url,
+            model=model,
+            api_key=api_key,
             timeout=timeout,
+            temperature=temperature,
         )
 
-        content = (
-            response.get("choices", [{}])[0]
-            .get("message", {})
-            .get("content", "")
-        )
-        inner_json_text = extract_json_object_text(content)
-        wrap_result(inner_json_text)
+        message = hwp_message()
+        inner_json_text = adapter.call(message)
+        adapter.wrap_and_print(inner_json_text)
         return 0
     except Exception as exc:
         fail(str(exc))

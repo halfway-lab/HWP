@@ -240,3 +240,7 @@ The next highest-value step is:
 
 The goal of that pass is not new functionality. It is to ensure the repository
 is telling one coherent story before the release candidate phase begins.
+
+Audit record:
+
+- `docs/V1_RELEASE_AUDIT_2026-04-01.md`

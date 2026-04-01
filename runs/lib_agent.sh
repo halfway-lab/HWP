@@ -9,8 +9,8 @@ HWP_REPLAY_CHAIN_PATH="${HWP_REPLAY_CHAIN_PATH:-}"
 HWP_PROVIDER_CONFIG="${HWP_PROVIDER_CONFIG:-}"
 HWP_PROVIDER_TYPE="${HWP_PROVIDER_TYPE:-}"
 HWP_PROVIDER_NAME="${HWP_PROVIDER_NAME:-}"
-HWP_AGENT_MAX_RETRIES="${HWP_AGENT_MAX_RETRIES:-2}"
-HWP_AGENT_RETRY_BACKOFF_SEC="${HWP_AGENT_RETRY_BACKOFF_SEC:-3}"
+HWP_AGENT_MAX_RETRIES="${HWP_AGENT_MAX_RETRIES:-3}"
+HWP_AGENT_TIMEOUT="${HWP_AGENT_TIMEOUT:-30}"
 
 _hwp_cli_agent_bin=""
 _hwp_cli_agent_cmd=""
@@ -408,33 +408,80 @@ print_hwp_provider_warnings() {
   fi
 }
 
+_hwp_timeout_cmd=""
+
+_get_timeout_cmd() {
+  if [ -n "$_hwp_timeout_cmd" ]; then
+    printf '%s' "$_hwp_timeout_cmd"
+    return 0
+  fi
+
+  if command -v timeout >/dev/null 2>&1; then
+    _hwp_timeout_cmd="timeout"
+  elif command -v gtimeout >/dev/null 2>&1; then
+    _hwp_timeout_cmd="gtimeout"
+  else
+    _hwp_timeout_cmd=""
+  fi
+  printf '%s' "$_hwp_timeout_cmd"
+}
+
+_invoke_hwp_agent_once() {
+  local msg="$1"
+  local session_id="$2"
+  local round_num="${3:-}"
+  local timeout_sec="${4:-30}"
+  local timeout_cmd
+  timeout_cmd="$(_get_timeout_cmd)"
+
+  if [ -n "$HWP_AGENT_CMD" ]; then
+    if [ -n "$timeout_cmd" ]; then
+      HWP_AGENT_MESSAGE="$msg" \
+      HWP_AGENT_SESSION_ID="$session_id" \
+      HWP_AGENT_ROUND="$round_num" \
+      "$timeout_cmd" "$timeout_sec" /bin/sh -c "$HWP_AGENT_CMD"
+    else
+      HWP_AGENT_MESSAGE="$msg" \
+      HWP_AGENT_SESSION_ID="$session_id" \
+      HWP_AGENT_ROUND="$round_num" \
+      /bin/sh -c "$HWP_AGENT_CMD"
+    fi
+  else
+    if [ -n "$timeout_cmd" ]; then
+      "$timeout_cmd" "$timeout_sec" "$HWP_AGENT_BIN" agent --message "$msg" --session-id "$session_id" --json 2>/dev/null
+    else
+      OPENCLAW_LOG_LEVEL=error "$HWP_AGENT_BIN" agent --message "$msg" --session-id "$session_id" --json
+    fi
+  fi
+}
+
 invoke_hwp_agent() {
   local msg="$1"
   local session_id="$2"
   local round_num="${3:-}"
-  local max_retries="${HWP_AGENT_MAX_RETRIES:-2}"
-  local backoff_sec="${HWP_AGENT_RETRY_BACKOFF_SEC:-3}"
+  local max_retries="${HWP_AGENT_MAX_RETRIES:-3}"
+  local timeout_sec="${HWP_AGENT_TIMEOUT:-30}"
   local attempt=0
+  local exit_code=0
 
   while :; do
-    if [ -n "$HWP_AGENT_CMD" ]; then
-      if HWP_AGENT_MESSAGE="$msg" \
-        HWP_AGENT_SESSION_ID="$session_id" \
-        HWP_AGENT_ROUND="$round_num" \
-        /bin/sh -c "$HWP_AGENT_CMD"; then
-        return 0
-      fi
-    elif OPENCLAW_LOG_LEVEL=error "$HWP_AGENT_BIN" agent --message "$msg" --session-id "$session_id" --json; then
+    if _invoke_hwp_agent_once "$msg" "$session_id" "$round_num" "$timeout_sec"; then
       return 0
+    fi
+    exit_code=$?
+
+    if [ "$exit_code" -eq 124 ]; then
+      echo "FATAL: Provider timeout after ${timeout_sec}s (session=${session_id} round=${round_num})" >&2
     fi
 
     if [ "$attempt" -ge "$max_retries" ]; then
-      return 1
+      echo "FATAL: Provider call failed after ${max_retries} retries (session=${session_id} round=${round_num})" >&2
+      exit 1
     fi
 
     attempt=$((attempt + 1))
-    echo "WARN: agent provider failed, retrying attempt ${attempt}/${max_retries} after ${backoff_sec}s (session=${session_id} round=${round_num})" >&2
+    local backoff_sec=$((2 ** attempt))
+    echo "WARN: Provider call failed (attempt ${attempt}/${max_retries}), retrying in ${backoff_sec}s..." >&2
     sleep "$backoff_sec"
   done
-
 }

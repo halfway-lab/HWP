@@ -571,6 +571,9 @@ http://127.0.0.1:8088/api/multi-provider/latest
   ```bash
   python3 -m hwp_protocol.cli fixture-verify blind_spot valid
   python3 -m hwp_protocol.cli log-verify continuity logs/chain_hwp_xxx.jsonl
+  
+  # transform-batch: 一次性完成 enrich + repack
+  python3 -m hwp_protocol.cli transform-batch '<result_json>' '<inner_json>' <round> <parent_recovery>
   ```
 
 如果你想单独检查某一维，也可以运行：
@@ -972,6 +975,9 @@ If you want to use the unified Python CLI directly, you can also run:
 ```bash
 python3 -m hwp_protocol.cli fixture-verify blind_spot valid
 python3 -m hwp_protocol.cli log-verify continuity logs/chain_hwp_xxx.jsonl
+
+# transform-batch: enrich + repack in one call
+python3 -m hwp_protocol.cli transform-batch '<result_json>' '<inner_json>' <round> <parent_recovery>
 ```
 
 To inspect each verification dimension separately:
