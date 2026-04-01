@@ -1,5 +1,11 @@
 # HWP Release Notes
 
+Historical release note:
+
+- this file tracks named release lines and historical acceptance baselines
+- current mainline development may include post-RC2 hardening that is not itself a new tagged release yet
+- for current working-mainline status, also read `README.md`, `docs/PROJECT_STATUS.md`, and `docs/STABILITY_STATUS.md`
+
 ## v0.6 RC2
 
 ### Version

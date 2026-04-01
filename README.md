@@ -583,8 +583,8 @@ http://127.0.0.1:8088/api/multi-provider/latest
 
 ---
 
-**当前主页状态**：仓库当前主线为 **HWP v0.6 RC2**，聚焦 runner output materialization、replay 验收、以及 `hwp_protocol/` 协议核心收口。  
-历史版本仍保留在 release notes 中，但主页说明与推荐命令已对齐当前 RC2 工作流。
+**当前主页状态**：仓库当前稳定主线仍以 **HWP v0.6 RC2** 为版本基线，但主分支已经继续完成了 benchmark overview、multi-provider smoke、lightweight dashboard、JSON API、以及 data contracts 等发布前硬化工作。  
+历史版本仍保留在 release notes 中；当前主页说明与推荐命令反映的是 RC2 基线之上的主线收口状态，并正朝 `v1.0` 发布准备推进。
 
 
 ---
@@ -983,5 +983,5 @@ bash runs/verify_v06_semantic_groups.sh logs
 ```
 The verification scripts check the structure of generated results, the presence of key fields, and their alignment with expected patterns.
 
-**Current homepage state**: the repository currently tracks **HWP v0.6 RC2**, focusing on runner output materialization, replay-based acceptance, and protocol-core consolidation under `hwp_protocol/`.  
-Historical releases are still preserved in the release notes, but the homepage guidance and recommended commands now align with the RC2 workflow.
+**Current homepage state**: the repository still treats **HWP v0.6 RC2** as the current release baseline, but the main branch has continued with pre-v1.0 hardening work including benchmark overviewing, multi-provider smoke flow, a lightweight dashboard, JSON API endpoints, and documented data contracts.  
+Historical releases are still preserved in the release notes, while the homepage guidance now reflects the current mainline state on top of the RC2 baseline as the project moves toward `v1.0`.

@@ -98,6 +98,7 @@
 
 - Known issues:
   - long-batch live provider stability still needs continued observation
+  - broader real multi-provider coverage is still thinner than the single-provider baseline
 - Migration risks:
   - many scripts assume current repo-root-relative paths
 - Path or config coupling:
@@ -107,9 +108,9 @@
 ## Next Development Step
 
 - Highest-priority next task:
-  - continue stabilizing long-batch live provider behavior
+  - execute the v1.0 release audit and release-candidate hardening plan in `docs/V1_RELEASE_PLAN.md`
 - What should happen right after migration:
-  - confirm all runner/spec/test paths still resolve after relocation
+  - treat repository-boundary cleanup as complete enough to focus on release validation rather than further workspace reshaping
 
 ## Notes
 
