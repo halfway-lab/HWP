@@ -905,9 +905,16 @@ def create_fallback_inner_json(
 class ChainRunner:
     """链运行器 - 执行单条链的 8 轮迭代"""
 
-    def __init__(self, config: RunnerConfig, provider_config: dict[str, str]):
+    def __init__(
+        self,
+        config: RunnerConfig,
+        provider_config: dict[str, str],
+        session_id: Optional[str] = None,
+    ):
         self.config = config
         self.provider_config = provider_config
+        self.session_id = session_id
+        self.last_chain_log: Optional[Path] = None
         self.log_dir = config.root_dir / "logs"
         self.log_dir.mkdir(parents=True, exist_ok=True)
 
@@ -927,11 +934,15 @@ class ChainRunner:
 
     def run_chain(self, base_line: str) -> None:
         """执行单条链（8轮）"""
-        # Generate session ID
-        timestamp = int(time.time())
-        random_suffix = random.randint(10000, 99999)
-        session_id = f"hwp_{timestamp}_{random_suffix}"
+        # Use provided session_id or generate one
+        if self.session_id:
+            session_id = self.session_id
+        else:
+            timestamp = int(time.time())
+            random_suffix = random.randint(10000, 99999)
+            session_id = f"hwp_{timestamp}_{random_suffix}"
         log_file = self.log_dir / f"chain_{session_id}.jsonl"
+        self.last_chain_log = log_file
 
         # Initialize state
         state = ChainState()

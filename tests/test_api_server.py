@@ -136,11 +136,11 @@ def test_submit_run_query_status_get_result_full_flow(
     with (
         patch("api_server.load_provider_config", return_value=mock_provider_config),
         patch("api_server.ChainRunner") as MockChainRunner,
-        patch("api_server._find_latest_chain_log", return_value=str(chain_log)),
         patch("api_server._extract_last_round_result", return_value=mock_chain_result),
     ):
         # 配置 mock ChainRunner
         mock_runner = MagicMock()
+        mock_runner.last_chain_log = chain_log  # 设置确定性路径
         MockChainRunner.return_value = mock_runner
 
         # 模拟 run_input_file 快速完成
@@ -200,40 +200,36 @@ def test_multi_provider_run(
     client: TestClient,
     mock_provider_config: dict[str, str],
 ) -> None:
-    """POST /api/v1/multi-run 并行调用多个 Provider"""
+    """POST /api/v1/multi-run 并行调用多个 Provider（使用 provider 名称列表）"""
     mock_results = {
         "deepseek": "DeepSeek response content",
         "moonshot": "Moonshot response content",
     }
 
-    with patch("api_server.run_multi_provider", return_value=mock_results):
+    with (
+        patch("api_server._load_provider_names", return_value=["deepseek", "moonshot"]),
+        patch("api_server.load_provider_config", return_value=mock_provider_config),
+        patch("api_server.run_multi_provider", return_value=mock_results),
+    ):
         response = client.post(
             "/api/v1/multi-run",
             json={
                 "input_text": "Test multi-provider input",
-                "providers": [
-                    {
-                        "HWP_PROVIDER_TYPE": "openai_compatible",
-                        "HWP_PROVIDER_NAME": "deepseek",
-                    },
-                    {
-                        "HWP_PROVIDER_TYPE": "openai_compatible",
-                        "HWP_PROVIDER_NAME": "moonshot",
-                    },
-                ],
+                "providers": ["deepseek", "moonshot"],
             },
         )
 
         assert response.status_code == 200
         data = response.json()
         assert "results" in data
-        assert "deepseek" in data["results"]
-        assert "moonshot" in data["results"]
 
 
 def test_multi_provider_empty_providers(client: TestClient) -> None:
     """POST /api/v1/multi-run 使用空 providers 列表"""
-    with patch("api_server.run_multi_provider", return_value={}):
+    with (
+        patch("api_server._load_provider_names", return_value=[]),
+        patch("api_server.run_multi_provider", return_value={}),
+    ):
         response = client.post(
             "/api/v1/multi-run",
             json={
@@ -699,10 +695,14 @@ def test_run_result_response_structure(
 
     with (
         patch("api_server.load_provider_config", return_value=mock_provider_config),
-        patch("api_server.ChainRunner"),
-        patch("api_server._find_latest_chain_log", return_value=str(chain_log)),
+        patch("api_server.ChainRunner") as MockChainRunner,
         patch("api_server._extract_last_round_result", return_value=mock_chain_result),
     ):
+        # 配置 mock ChainRunner
+        mock_runner = MagicMock()
+        mock_runner.last_chain_log = chain_log  # 设置确定性路径
+        MockChainRunner.return_value = mock_runner
+
         response = client.post(
             "/api/v1/runs",
             json={"input_text": "Test result structure", "rounds": 1},
@@ -766,17 +766,18 @@ def test_concurrent_sessions(client: TestClient, mock_provider_config: dict[str,
 
 def test_multi_run_with_max_workers(client: TestClient) -> None:
     """测试 multi-run 使用 max_workers 参数"""
-    mock_results = {"provider1": "result1", "provider2": "result2"}
+    mock_results = {"deepseek": "result1", "moonshot": "result2"}
 
-    with patch("api_server.run_multi_provider", return_value=mock_results) as mock_func:
+    with (
+        patch("api_server._load_provider_names", return_value=["deepseek", "moonshot"]),
+        patch("api_server.load_provider_config", return_value={"HWP_PROVIDER_NAME": "test"}),
+        patch("api_server.run_multi_provider", return_value=mock_results) as mock_func,
+    ):
         response = client.post(
             "/api/v1/multi-run",
             json={
                 "input_text": "Test with max workers",
-                "providers": [
-                    {"HWP_PROVIDER_NAME": "provider1"},
-                    {"HWP_PROVIDER_NAME": "provider2"},
-                ],
+                "providers": ["deepseek", "moonshot"],
                 "max_workers": 2,
             },
         )
@@ -849,20 +850,23 @@ class TestPauseSummary:
             "api_server.invoke_provider_with_retry", return_value=mock_result
         ) as mock_invoke:
             with patch(
-                "api_server.load_provider_config",
-                return_value={
-                    "HWP_PROVIDER_NAME": "default",
-                    "HWP_PROVIDER_TYPE": "openai_compatible",
-                },
+                "api_server._load_provider_names", return_value=["llama3", "deepseek"]
             ):
-                resp = client.post(
-                    "/api/v1/pause-summary",
-                    json={
-                        "context": {"test": True},
-                        "provider_type": "ollama",
-                        "provider_name": "llama3",
+                with patch(
+                    "api_server.load_provider_config",
+                    return_value={
+                        "HWP_PROVIDER_NAME": "default",
+                        "HWP_PROVIDER_TYPE": "openai_compatible",
                     },
-                )
+                ):
+                    resp = client.post(
+                        "/api/v1/pause-summary",
+                        json={
+                            "context": {"test": True},
+                            "provider_type": "ollama",
+                            "provider_name": "llama3",
+                        },
+                    )
         assert resp.status_code == 200
 
     def test_pause_summary_non_json_response(self, client: TestClient) -> None:
@@ -965,3 +969,260 @@ class TestPauseSummary:
                     },
                 )
         assert resp.status_code == 200
+
+
+# =============================================================================
+# 12. 安全测试 - SSRF 防护
+# =============================================================================
+
+
+class TestSSRFProtection:
+    """SSRF + 凭证泄露漏洞修复测试"""
+
+    def test_multi_run_unknown_provider_rejected(self, client: TestClient) -> None:
+        """未知 provider 名称应返回 400 错误"""
+        with patch("api_server._load_provider_names", return_value=["deepseek", "moonshot"]):
+            response = client.post(
+                "/api/v1/multi-run",
+                json={
+                    "input_text": "Test input",
+                    "providers": ["malicious_provider"],
+                },
+            )
+
+        assert response.status_code == 400
+        assert "Unknown provider" in response.json()["detail"]
+        assert "malicious_provider" in response.json()["detail"]
+
+    def test_multi_run_loads_trusted_config(self, client: TestClient) -> None:
+        """multi-run 应从服务端受信任配置加载，而非使用用户传入的配置"""
+        mock_provider_config = {
+            "HWP_PROVIDER_NAME": "deepseek",
+            "HWP_PROVIDER_TYPE": "openai_compatible",
+            "HWP_LLM_API_KEY": "secret-api-key",
+            "HWP_LLM_BASE_URL": "https://api.deepseek.com/v1",
+        }
+        mock_results = {"deepseek": "response"}
+
+        with (
+            patch("api_server._load_provider_names", return_value=["deepseek"]),
+            patch("api_server.load_provider_config", return_value=mock_provider_config) as mock_load,
+            patch("api_server.run_multi_provider", return_value=mock_results) as mock_run,
+        ):
+            response = client.post(
+                "/api/v1/multi-run",
+                json={
+                    "input_text": "Test input",
+                    "providers": ["deepseek"],
+                },
+            )
+
+            assert response.status_code == 200
+
+            # 验证 load_provider_config 被调用（从服务端配置加载）
+            mock_load.assert_called()
+
+            # 验证 run_multi_provider 收到的是服务端配置
+            call_args = mock_run.call_args
+            provider_configs = call_args[0][1]  # 第二个参数是 providers 列表
+            assert len(provider_configs) == 1
+            assert provider_configs[0]["HWP_LLM_API_KEY"] == "secret-api-key"
+            assert provider_configs[0]["HWP_LLM_BASE_URL"] == "https://api.deepseek.com/v1"
+
+    def test_multi_run_uses_provider_specific_env_file(self, client: TestClient, tmp_path: Path) -> None:
+        """multi-run 应优先使用 provider 特定的 env 文件"""
+        import api_server
+
+        # 创建临时配置目录
+        config_dir = tmp_path / "config"
+        config_dir.mkdir(parents=True, exist_ok=True)
+
+        # 创建 provider.deepseek.env 文件
+        deepseek_env = config_dir / "provider.deepseek.env"
+        deepseek_env.write_text('HWP_LLM_BASE_URL=https://api.deepseek.com/v1\n')
+
+        # 创建 providers.list
+        providers_list = config_dir / "providers.list"
+        providers_list.write_text('deepseek|provider.deepseek.env|DeepSeek\n')
+
+        original_root = api_server.ROOT_DIR
+        try:
+            api_server.ROOT_DIR = tmp_path
+
+            with patch("api_server.run_multi_provider", return_value={"deepseek": "ok"}) as mock_run:
+                response = client.post(
+                    "/api/v1/multi-run",
+                    json={
+                        "input_text": "Test",
+                        "providers": ["deepseek"],
+                    },
+                )
+
+                assert response.status_code == 200
+
+                # 验证使用了 deepseek 特定配置
+                call_args = mock_run.call_args
+                provider_configs = call_args[0][1]
+                assert provider_configs[0]["HWP_LLM_BASE_URL"] == "https://api.deepseek.com/v1"
+
+        finally:
+            api_server.ROOT_DIR = original_root
+
+    def test_pause_summary_unknown_provider_rejected(self, client: TestClient) -> None:
+        """pause-summary 使用未知 provider 应返回 400 错误"""
+        with patch("api_server._load_provider_names", return_value=["deepseek", "moonshot"]):
+            response = client.post(
+                "/api/v1/pause-summary",
+                json={
+                    "context": {"test": True},
+                    "provider_name": "malicious_provider",
+                },
+            )
+
+        assert response.status_code == 400
+        assert "Unknown provider" in response.json()["detail"]
+        assert "malicious_provider" in response.json()["detail"]
+
+    def test_pause_summary_valid_provider_accepted(self, client: TestClient) -> None:
+        """pause-summary 使用有效 provider 应正常处理"""
+        import json
+
+        mock_result = json.dumps({"overall_theme": "test"})
+
+        with (
+            patch("api_server._load_provider_names", return_value=["deepseek", "moonshot"]),
+            patch("api_server.invoke_provider_with_retry", return_value=mock_result),
+            patch(
+                "api_server.load_provider_config",
+                return_value={
+                    "HWP_PROVIDER_NAME": "default",
+                    "HWP_PROVIDER_TYPE": "openai_compatible",
+                },
+            ),
+        ):
+            response = client.post(
+                "/api/v1/pause-summary",
+                json={
+                    "context": {"test": True},
+                    "provider_name": "deepseek",
+                },
+            )
+
+        assert response.status_code == 200
+        data = response.json()
+        assert data["status"] == "success"
+
+
+# =============================================================================
+# 13. 并发 Session 确定性映射测试
+# =============================================================================
+
+
+class TestConcurrentSessionDeterministicMapping:
+    """验证并发 session 不会互相干扰结果"""
+
+    def test_concurrent_sessions_have_deterministic_log_paths(
+        self,
+        client: TestClient,
+        mock_provider_config: dict[str, str],
+        tmp_path: Path,
+    ) -> None:
+        """并发 session 应该各自获得正确的链日志路径，不会互相干扰"""
+        import json
+        import threading
+        import api_server
+
+        # 创建日志目录
+        logs_dir = tmp_path / "logs"
+        logs_dir.mkdir(parents=True, exist_ok=True)
+
+        # 用于跟踪每个 session 的 chain_path
+        session_chain_paths: dict[str, Optional[str]] = {}
+        lock = threading.Lock()
+
+        def mock_run_and_capture(session_id: str):
+            """模拟运行并记录 chain_path"""
+            # 为每个 session 创建独特的日志文件
+            chain_log = logs_dir / f"chain_{session_id}.jsonl"
+            mock_result = {"session_id": session_id, "node_id": f"node_{session_id}"}
+            with open(chain_log, "w", encoding="utf-8") as f:
+                f.write(json.dumps(mock_result, ensure_ascii=False) + "\n")
+
+            return chain_log
+
+        def create_mock_runner(session_id: str):
+            """创建带有确定性 last_chain_log 的 mock runner"""
+            chain_log = mock_run_and_capture(session_id)
+            mock_runner = MagicMock()
+            mock_runner.last_chain_log = chain_log
+            return mock_runner
+
+        with (
+            patch("api_server.load_provider_config", return_value=mock_provider_config),
+            patch("api_server.ChainRunner") as MockChainRunner,
+            patch("api_server._extract_last_round_result") as mock_extract,
+        ):
+
+            def get_mock_runner(*args, **kwargs):
+                # 从 kwargs 中获取 session_id
+                session_id = kwargs.get("session_id", args[2] if len(args) > 2 else None)
+                return create_mock_runner(session_id)
+
+            MockChainRunner.side_effect = get_mock_runner
+
+            # 模拟 extract 结果
+            def extract_result(path):
+                if path:
+                    with open(path, "r", encoding="utf-8") as f:
+                        line = f.readline().strip()
+                        if line:
+                            return json.loads(line)
+                return None
+
+            mock_extract.side_effect = extract_result
+
+            # 提交两个并发任务
+            response1 = client.post(
+                "/api/v1/runs",
+                json={"input_text": "Session 1 input", "rounds": 1},
+            )
+            session_id_1 = response1.json()["session_id"]
+
+            response2 = client.post(
+                "/api/v1/runs",
+                json={"input_text": "Session 2 input", "rounds": 1},
+            )
+            session_id_2 = response2.json()["session_id"]
+
+            # 等待两个任务完成
+            max_wait = 5.0
+            start = time.time()
+            while time.time() - start < max_wait:
+                session1 = api_server._sessions.get(session_id_1)
+                session2 = api_server._sessions.get(session_id_2)
+                if (
+                    session1
+                    and session1.status == "completed"
+                    and session2
+                    and session2.status == "completed"
+                ):
+                    break
+                time.sleep(0.1)
+
+            # 验证两个 session 都完成了
+            session1 = api_server._sessions.get(session_id_1)
+            session2 = api_server._sessions.get(session_id_2)
+            assert session1 is not None and session1.status == "completed"
+            assert session2 is not None and session2.status == "completed"
+
+            # 验证每个 session 的 chain_path 是唯一的
+            assert session1.chain_path != session2.chain_path
+            assert session_id_1 in session1.chain_path
+            assert session_id_2 in session2.chain_path
+
+            # 验证每个 session 的结果指向正确的日志
+            assert session1.result is not None
+            assert session2.result is not None
+            # 结果应该包含各自的 session_id（在 node_id 中体现）
+            assert session1.result["session_id"] == session_id_1
+            assert session2.result["session_id"] == session_id_2

@@ -15,7 +15,6 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 
 from adapter_common import (
     extract_json_object_text,
-    fail,
     json_headers,
     post_json,
     wrap_result,
@@ -64,7 +63,7 @@ class AdapterBase(ABC):
             解析后的 JSON 文本字符串
 
         Raises:
-            SystemExit: 调用失败时退出
+            RuntimeError: 调用失败时抛出
         """
         try:
             endpoint = self._get_endpoint()
@@ -78,7 +77,6 @@ class AdapterBase(ABC):
             return inner_json_text
         except Exception as exc:
             self._handle_error(exc, "call")
-            raise SystemExit(1)
 
     def _post_request(
         self,
@@ -146,9 +144,9 @@ class AdapterBase(ABC):
             context: 错误上下文描述
 
         Raises:
-            SystemExit: 总是退出程序
+            RuntimeError: 总是抛出 RuntimeError，包含上下文信息
         """
-        fail(f"[{context}] {error}")
+        raise RuntimeError(f"[{context}] {error}") from error
 
     def _extract_json(self, text: str) -> str:
         """从文本中提取 JSON 对象

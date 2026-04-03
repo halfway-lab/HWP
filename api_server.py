@@ -103,10 +103,12 @@ class MultiRunRequest(BaseModel):
     """多 Provider 并行调用请求"""
 
     input_text: str = Field(..., description="输入文本（prompt）")
-    providers: list[dict[str, str]] = Field(
-        ..., description="Provider 配置列表，每个配置包含 HWP_PROVIDER_TYPE, HWP_PROVIDER_NAME 等"
+    providers: list[str] = Field(
+        ...,
+        description="Provider 名称列表（如 ['deepseek', 'moonshot']），从服务端受信任配置加载",
+        examples=[["deepseek", "moonshot"]],
     )
-    max_workers: Optional[int] = Field(None, description="最大并行工作线程数")
+    max_workers: Optional[int] = Field(None, ge=1, le=16, description="最大并行数")
 
 
 class MultiRunResponse(BaseModel):
@@ -228,29 +230,31 @@ class SessionState:
 
 # In-memory session store
 _sessions: dict[str, SessionState] = {}
+_sessions_lock = threading.Lock()
 
 
 def _cleanup_expired_sessions() -> None:
     """清理过期或超出上限的 session"""
-    now = time.time()
-    # 先清理已完成/失败/取消且超过 TTL 的
-    expired = [
-        sid for sid, s in _sessions.items()
-        if s.status in ("completed", "failed", "cancelled")
-        and now - s.last_access_at > _SESSION_TTL_SEC
-    ]
-    for sid in expired:
-        _sessions.pop(sid, None)
-
-    # 如果仍超过上限，按 last_access_at 排序删除最旧的已终止 session
-    if len(_sessions) > _MAX_SESSIONS:
-        terminated = sorted(
-            [(sid, s) for sid, s in _sessions.items() if s.status in ("completed", "failed", "cancelled")],
-            key=lambda x: x[1].last_access_at,
-        )
-        while len(_sessions) > _MAX_SESSIONS and terminated:
-            sid, _ = terminated.pop(0)
+    with _sessions_lock:
+        now = time.time()
+        # 先清理已完成/失败/取消且超过 TTL 的
+        expired = [
+            sid for sid, s in _sessions.items()
+            if s.status in ("completed", "failed", "cancelled")
+            and now - s.last_access_at > _SESSION_TTL_SEC
+        ]
+        for sid in expired:
             _sessions.pop(sid, None)
+
+        # 如果仍超过上限，按 last_access_at 排序删除最旧的已终止 session
+        if len(_sessions) > _MAX_SESSIONS:
+            terminated = sorted(
+                [(sid, s) for sid, s in _sessions.items() if s.status in ("completed", "failed", "cancelled")],
+                key=lambda x: x[1].last_access_at,
+            )
+            while len(_sessions) > _MAX_SESSIONS and terminated:
+                sid, _ = terminated.pop(0)
+                _sessions.pop(sid, None)
 
 
 # =============================================================================
@@ -348,8 +352,8 @@ def _execute_chain(session: SessionState, request: RunRequest) -> None:
             provider_name=request.provider_name or "",
         )
 
-        # Create runner
-        runner = ChainRunner(runner_config, provider_config)
+        # Create runner with session_id for deterministic log path
+        runner = ChainRunner(runner_config, provider_config, session_id=session.session_id)
 
         # Write input to temporary file
         with tempfile.NamedTemporaryFile(
@@ -374,8 +378,11 @@ def _execute_chain(session: SessionState, request: RunRequest) -> None:
             session.completed_at = time.time()
             return
 
-        # Find the latest chain log file to extract results
-        session.chain_path = _find_latest_chain_log(session.session_id)
+        # Use deterministic log path from runner, fallback to scan
+        if runner.last_chain_log and runner.last_chain_log.exists():
+            session.chain_path = str(runner.last_chain_log)
+        else:
+            session.chain_path = _find_latest_chain_log(session.session_id)
         session.result = _extract_last_round_result(session.chain_path)
         session.status = "completed"
         session.current_round = request.rounds
@@ -469,7 +476,8 @@ async def create_run(
         status="queued",
         total_rounds=request.rounds,
     )
-    _sessions[session_id] = session
+    with _sessions_lock:
+        _sessions[session_id] = session
 
     # Submit to executor
     _executor.submit(_execute_chain, session, request)
@@ -488,11 +496,11 @@ async def get_run_status(
     session_id: str, _: None = Depends(verify_api_key)
 ) -> RunStatusResponse:
     """查询链运行状态"""
-    session = _sessions.get(session_id)
-    if not session:
-        raise HTTPException(status_code=404, detail="Session not found")
-
-    session.last_access_at = time.time()
+    with _sessions_lock:
+        session = _sessions.get(session_id)
+        if not session:
+            raise HTTPException(status_code=404, detail="Session not found")
+        session.last_access_at = time.time()
 
     return RunStatusResponse(
         session_id=session.session_id,
@@ -516,11 +524,11 @@ async def get_run_result(
     session_id: str, _: None = Depends(verify_api_key)
 ) -> RunResultResponse:
     """获取链运行结果"""
-    session = _sessions.get(session_id)
-    if not session:
-        raise HTTPException(status_code=404, detail="Session not found")
-
-    session.last_access_at = time.time()
+    with _sessions_lock:
+        session = _sessions.get(session_id)
+        if not session:
+            raise HTTPException(status_code=404, detail="Session not found")
+        session.last_access_at = time.time()
 
     if session.status != "completed":
         raise HTTPException(
@@ -545,11 +553,11 @@ async def cancel_run(
     session_id: str, _: None = Depends(verify_api_key)
 ) -> CancelResponse:
     """取消链运行"""
-    session = _sessions.get(session_id)
-    if not session:
-        raise HTTPException(status_code=404, detail="Session not found")
-
-    session.last_access_at = time.time()
+    with _sessions_lock:
+        session = _sessions.get(session_id)
+        if not session:
+            raise HTTPException(status_code=404, detail="Session not found")
+        session.last_access_at = time.time()
 
     # Set cancel flag
     session.cancel_flag.set()
@@ -563,6 +571,43 @@ async def cancel_run(
 
 
 # =============================================================================
+# Provider Name Validation (Security)
+# =============================================================================
+
+
+def _load_provider_names() -> list[str]:
+    """从 config/providers.list 加载可用的 provider 名称列表（白名单）
+
+    Returns:
+        Provider 名称列表，如 ['deepseek', 'moonshot', 'ollama']
+    """
+    providers_path = ROOT_DIR / "config" / "providers.list"
+    providers: list[str] = []
+
+    if not providers_path.exists():
+        return providers
+
+    try:
+        with open(providers_path, "r", encoding="utf-8") as f:
+            for line in f:
+                line = line.strip()
+                # Skip empty lines and comments
+                if not line or line.startswith("#"):
+                    continue
+
+                # Format: provider_name|env_file|description
+                parts = line.split("|")
+                if parts:
+                    provider_name = parts[0].strip()
+                    if provider_name:
+                        providers.append(provider_name)
+    except Exception:
+        pass
+
+    return providers
+
+
+# =============================================================================
 # API Endpoints - Multi-Provider
 # =============================================================================
 
@@ -571,7 +616,7 @@ async def cancel_run(
     "/api/v1/multi-run",
     response_model=MultiRunResponse,
     summary="多 Provider 并行调用",
-    description="并行调用多个 Provider，适用于 benchmark 和对比测试场景。",
+    description="并行调用多个 Provider，适用于 benchmark 和对比测试场景。Provider 配置从服务端受信任配置加载。",
     tags=["runs"],
 )
 async def multi_run(
@@ -579,10 +624,38 @@ async def multi_run(
 ) -> MultiRunResponse:
     """多 Provider 并行调用
 
+    安全说明：Provider 名称必须在 config/providers.list 白名单中，
+    配置从服务端的 config/provider.{name}.env 文件加载，
+    防止 SSRF 和凭证泄露攻击。
+
     这是同步操作，会阻塞直到所有 Provider 调用完成。
     """
     import asyncio
     from functools import partial
+
+    # 加载可用 provider 列表（用于白名单校验）
+    available = _load_provider_names()
+
+    # 构建安全的 provider 配置列表
+    provider_configs: list[dict[str, str]] = []
+    for name in request.providers:
+        # 白名单校验
+        if name not in available:
+            raise HTTPException(
+                status_code=400,
+                detail=f"Unknown provider: {name}. Available providers: {available}",
+            )
+
+        # 从受信任的服务端配置加载
+        provider_env = ROOT_DIR / "config" / f"provider.{name}.env"
+        if provider_env.exists():
+            config = load_provider_config(ROOT_DIR, provider_env)
+        else:
+            # 使用默认配置，覆盖 provider name
+            config = load_provider_config(ROOT_DIR)
+            config["HWP_PROVIDER_NAME"] = name
+
+        provider_configs.append(config)
 
     # Build runner config for multi-provider
     runner_config = RunnerConfig(
@@ -598,7 +671,7 @@ async def multi_run(
         partial(
             run_multi_provider,
             request.input_text,
-            request.providers,
+            provider_configs,
             runner_config,
             request.max_workers,
         ),
@@ -684,6 +757,15 @@ async def pause_summary(
     start_time = time.time()
 
     try:
+        # 白名单校验 provider_name（如果指定）
+        if request.provider_name:
+            available = _load_provider_names()
+            if request.provider_name not in available:
+                raise HTTPException(
+                    status_code=400,
+                    detail=f"Unknown provider: {request.provider_name}. Available providers: {available}",
+                )
+
         # 加载 provider 配置
         provider_config = load_provider_config(ROOT_DIR)
 
@@ -747,6 +829,9 @@ async def pause_summary(
                 provider_used=provider_used,
             )
 
+    except HTTPException:
+        # 重新抛出 HTTPException（如白名单校验失败）
+        raise
     except Exception as exc:
         duration_ms = int((time.time() - start_time) * 1000)
         raise HTTPException(
